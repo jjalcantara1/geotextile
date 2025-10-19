@@ -13,7 +13,6 @@ def main():
     X_train, _, _, _, _, _ = preprocessor.preprocess()
     scaler.fit(X_train)
 
-    # Now get num_classes after encoder is fitted
     num_classes = len(preprocessor.get_class_names())
     ann_model = ANNModel(input_dim=9, num_classes=num_classes)
 
