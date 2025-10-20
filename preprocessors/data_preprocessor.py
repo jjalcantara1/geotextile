@@ -27,11 +27,9 @@ class DataPreprocessor:
 
     def split_data(self, X, y_encoded):
         """Split data into train, validation, and test sets."""
-        # First split: train and temp (val+test)
         X_train, X_temp, y_train, y_temp = train_test_split(
             X, y_encoded, test_size=(VAL_SPLIT + TEST_SPLIT), random_state=42
         )
-        # Second split: val and test
         val_size = VAL_SPLIT / (VAL_SPLIT + TEST_SPLIT)
         X_val, X_test, y_val, y_test = train_test_split(
             X_temp, y_temp, test_size=(1 - val_size), random_state=42
