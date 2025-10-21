@@ -21,6 +21,7 @@ const Chatbot = () => {
   const [data, setData] = useState({});
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [editingParam, setEditingParam] = useState(null);
 
 
   const handleSubmit = async (e, value = null) => {
@@ -32,8 +33,8 @@ const Chatbot = () => {
     if (currentStep < parameters.length) {
       // Collecting parameters
       const value = parseFloat(userInput);
-      if (isNaN(value) || value <= 0) {
-        setMessages(prev => [...prev, { type: 'bot', text: 'Please enter a valid positive number.' }]);
+      if (isNaN(value) || value < 0) {
+        setMessages(prev => [...prev, { type: 'bot', text: 'Please enter a valid non-negative number.' }]);
         setInput('');
         return;
       }
@@ -77,24 +78,62 @@ const Chatbot = () => {
         }
         setIsLoading(false);
       } else if (userInput === 'no') {
-        // Restart
+        // Ask to edit
+        setMessages(prev => [...prev, { type: 'bot', text: 'Would you like to edit a parameter? (yes/no)' }]);
+        setCurrentStep(parameters.length + 2); // Move to edit ask step
+      } else {
+        setMessages(prev => [...prev, { type: 'bot', text: 'Please reply with "yes" or "no".' }]);
+      }
+    } else if (currentStep === parameters.length + 2) {
+      // Edit ask step
+      if (userInput === 'yes') {
+        const paramList = Object.entries(data).map(([k, v]) => `${parameters.find(p => p.key === k).label}: ${v}`).join('\n');
+        setMessages(prev => [...prev, { type: 'bot', text: `Which parameter would you like to edit?\n\n${paramList}\n\nPlease type the parameter name (e.g., "Tensile Strength").` }]);
+        setCurrentStep(currentStep + 1); // Move to edit select step
+      } else if (userInput === 'no') {
         setMessages(prev => [...prev, { type: 'bot', text: 'Let\'s start over. What is the tensile strength? (e.g., 88.90)' }]);
         setCurrentStep(0);
         setData({});
       } else {
         setMessages(prev => [...prev, { type: 'bot', text: 'Please reply with "yes" or "no".' }]);
       }
+    } else if (currentStep === parameters.length + 3) {
+      // Edit select step
+      const param = parameters.find(p => p.label.toLowerCase().includes(userInput.toLowerCase()));
+      if (param) {
+        setEditingParam(param.key);
+        setMessages(prev => [...prev, { type: 'bot', text: param.prompt }]);
+        setCurrentStep(parameters.length + 4); // Move to edit input step
+      } else {
+        setMessages(prev => [...prev, { type: 'bot', text: 'Parameter not found. Please try typing part of the parameter name (e.g., "tensile" for "Tensile Strength").' }]);
+      }
     } else if (currentStep === parameters.length + 1) {
       // Restart step
       if (userInput === 'yes') {
-        setMessages(prev => [...prev, { type: 'bot', text: 'Great! Let\'s start over. What is the tensile strength? (e.g., 88.90)' }]);
         setCurrentStep(0);
         setData({});
+        setMessages([
+          { type: 'bot', text: 'Hello! I\'m your Geotextile Predictor Assistant. I\'ll help you estimate the geotextile type based on your input parameters. Let\'s begin!' },
+          { type: 'bot', text: parameters[0].prompt }
+        ]);
       } else if (userInput === 'no') {
-        setMessages(prev => [...prev, { type: 'bot', text: 'Thank you for using the Geotextile Predictor!' }]);
+        setMessages(prev => [...prev, { type: 'bot', text: 'Thank you for using the Geotextile Predictor! Goodbye.' }]);
       } else {
         setMessages(prev => [...prev, { type: 'bot', text: 'Please reply with "yes" or "no".' }]);
       }
+    } else if (currentStep === parameters.length + 4) {
+      // Edit input step
+      const value = parseFloat(userInput);
+      if (isNaN(value) || value < 0) {
+        setMessages(prev => [...prev, { type: 'bot', text: 'Please enter a valid non-negative number.' }]);
+        setInput('');
+        return;
+      }
+      const newData = { ...data, [editingParam]: value };
+      setData(newData);
+      setEditingParam(null);
+      setMessages(prev => [...prev, { type: 'bot', text: 'Parameter updated! Here\'s the updated data:\n\n' + Object.entries(newData).map(([k, v]) => `${parameters.find(p => p.key === k).label}: ${v}`).join('\n') + '\n\nShould I proceed with prediction? (yes/no)' }]);
+      setCurrentStep(parameters.length); // Back to confirmation step
     }
     setInput('');
   };
@@ -110,17 +149,22 @@ const Chatbot = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      <div className="bg-gray-800 text-white p-4 text-center shadow-lg">
-        <h1 className="text-2xl font-bold mb-1">Geotextile Predictor</h1>
-        <p className="text-sm opacity-90">AI-Powered Material Classification</p>
+      <div className="bg-gray-900 text-white p-6 text-center shadow-lg flex items-center justify-center space-x-4">
+        <svg className="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+        </svg>
+        <div>
+          <h1 className="text-3xl font-bold mb-1">Geotextile Predictor</h1>
+          <p className="text-base opacity-90">AI-Powered Material Classification</p>
+        </div>
       </div>
-      <div id="chat-container" className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      <div id="chat-container" className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-gray-50 to-gray-100">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl px-4 py-3 rounded-2xl shadow-md ${
+            <div className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl px-5 py-4 rounded-2xl shadow-lg ${
               msg.type === 'user'
-                ? 'bg-gray-700 text-white rounded-br-md'
-                : 'bg-white text-gray-800 border border-gray-300 rounded-bl-md'
+                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-br-md'
+                : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md shadow-md'
             }`}>
               <div className="whitespace-pre-line text-base md:text-lg lg:text-xl leading-relaxed">
                 {msg.text}
@@ -165,6 +209,28 @@ const Chatbot = () => {
         <div className="flex justify-start p-4">
           <div className="bg-white text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md shadow-md border border-gray-300 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
             <div className="text-base leading-relaxed mb-3">Would you like to test another material?</div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => handleSubmit(null, 'yes')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200 shadow-sm"
+                disabled={isLoading}
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => handleSubmit(null, 'no')}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all duration-200 shadow-sm"
+                disabled={isLoading}
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : currentStep === parameters.length + 2 ? (
+        <div className="flex justify-start p-4">
+          <div className="bg-white text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md shadow-md border border-gray-300 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
+            <div className="text-base leading-relaxed mb-3">Would you like to edit a parameter?</div>
             <div className="flex space-x-2">
               <button
                 onClick={() => handleSubmit(null, 'yes')}

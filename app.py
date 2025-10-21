@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -7,6 +7,7 @@ from preprocessors.data_preprocessor import DataPreprocessor
 from scalers.scaler import DataScaler
 from models.ann_model import ANNModel
 from dataset.constants import MODEL_SAVE_PATH
+from logger import setup_logger
 
 app = FastAPI()
 
@@ -17,6 +18,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Set up logger
+logger = setup_logger()
 
 # Initialize components
 preprocessor = DataPreprocessor()
@@ -47,6 +51,14 @@ descriptions = {
 
 class PredictionRequest(BaseModel):
     features: List[float]
+
+@app.get("/welcome")
+def welcome(request: Request):
+    """
+    Returns a welcome message
+    """
+    logger.info(f"Request received: {request.method} {request.url.path}")
+    return {"message": "Welcome to the Geotextile Predictor API!"}
 
 @app.post("/predict")
 def predict(request: PredictionRequest):
