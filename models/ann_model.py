@@ -1,5 +1,5 @@
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Input, BatchNormalization
+from tensorflow.keras.layers import Dense, Dropout, Input, BatchNormalization, LeakyReLU
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
 from dataset.constants import LEARNING_RATE, EPOCHS, BATCH_SIZE, EARLY_STOPPING_PATIENCE
@@ -15,15 +15,21 @@ class ANNModel:
     def build_model(self):
         """Build the ANN model."""
         self.model = Sequential([
-            Input(shape=(self.input_dim,)),
-            Dense(64, activation='relu'),
-            BatchNormalization(),
-            Dropout(0.3),
-            Dense(32, activation='relu'),
-            BatchNormalization(),
-            Dropout(0.3),
-            Dense(16, activation='relu'),
-            Dropout(0.3),
+            Dense(256, input_dim=self.input_dim),
+            LeakyReLU(alpha=0.1),
+            Dropout(0.25),
+
+            Dense(128),
+            LeakyReLU(alpha=0.1),
+            Dropout(0.2),
+
+            Dense(64),
+            LeakyReLU(alpha=0.1),
+            Dropout(0.15),
+
+            Dense(32),
+            LeakyReLU(alpha=0.1),
+            Dropout(0.1),
             Dense(self.num_classes, activation='softmax')
         ])
         return self.model
