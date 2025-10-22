@@ -37,8 +37,21 @@ class DataPreprocessor:
         return X_train, X_val, X_test, y_train, y_val, y_test
 
     def preprocess(self):
-        """Full preprocessing pipeline."""
+        """Full preprocessing pipeline with log transformation."""
         self.load_data()
+        
+        # Apply Log Transformation (log(1+x)) to skewed numerical features
+        skewed_features = [
+            'Tensile Strength (kN/m)', 
+            'Puncture Resistance (N)', 
+            'Material Cost (PHP/m²)', 
+            'Installation Cost (PHP/m²)'
+        ]
+        
+        for col in skewed_features:
+            # np.log1p is log(1 + x), safer for values close to zero.
+            self.df[col] = np.log1p(self.df[col]) 
+        
         X = self.df[self.feature_columns].values
         y = self.df[self.target_column].values
         y_encoded = self.encode_labels(y)
