@@ -1,44 +1,42 @@
 @import "tailwindcss";
 
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* * FINAL FIX: Aggressively enforce dark background, but allow components to set their own colors/shapes.
+*/
+html, body, #root {
+  background-color: #121212 !important; 
+  height: 100vh;
+  width: 100vw;
+  /* Remove conflicting centering/padding */
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: left !important;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* * CRUCIAL FIX: Target all elements, but ONLY force the text white. 
+ * This allows Tailwind classes like bg-maroon-end or rounded-2xl to work normally. 
+*/
+* {
+    color: #FFFFFF !important;
+    box-sizing: border-box; 
+    /* DO NOT force background/border/shadow here, let component CSS handle that */
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Specific text color for subtle elements */
+.text-subtle-text {
+    color: #A0A0A0 !important;
+}
+.placeholder-subtle-text::placeholder {
+    color: #A0A0A0 !important;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+/* Ensure the dark component backgrounds remain dark for the bot's bubbles and header */
+.bg-medium-dark, .bg-dark-bg, .bg-medium-dark * {
+    /* Keep background color as defined by the Tailwind class */
+    background-color: #1F1F1F;
 }
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+/* Re-enable React/App to manage its own dimensions without interference */
+.w-full.h-screen.flex.flex-col {
+  max-width: 100%;
 }
