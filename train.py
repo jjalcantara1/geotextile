@@ -45,9 +45,9 @@ def main():
     history = ann_model.model.fit(
         X_train_scaled, y_train,
         validation_data=(X_val_scaled, y_val),
-        epochs=100,  # or replace with your EPOCHS constant
+        epochs=50,  # or replace with your EPOCHS constant
         batch_size=32,  # or use BATCH_SIZE constant
-        callbacks=[early_stopping, lr_scheduler],
+        callbacks=[lr_scheduler],
         verbose=1
     )
 
