@@ -29,7 +29,6 @@ class ANNModel:
 
             Dense(32),
             LeakyReLU(alpha=0.1),
-            Dropout(0.1),
             Dense(self.num_classes, activation='softmax')
         ])
         return self.model
