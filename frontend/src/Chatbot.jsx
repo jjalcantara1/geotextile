@@ -1,5 +1,20 @@
 import { useState, useEffect } from 'react';
 
+// --- Constants for enhanced depth and contrast ---
+const GLOBAL_BG_COLOR = '#1A1A1A'; // Base Background (Chat Body)
+const COMPONENT_BG_COLOR = '#3A3A3A'; // Component Surface (Bot Bubbles, Header Surface) - Significantly Lighter for contrast
+
+const LIGHT_TEXT_COLOR = '#E0E0E0'; // Off-white
+const SUBTLE_TEXT_COLOR = '#888888'; // Grey
+const MAROON_START_COLOR = '#6A1C2F'; // Deep maroon
+const MAROON_END_COLOR = '#8C2D43'; // Brighter maroon
+
+// Design Constants for shape and shadow
+const BUBBLE_RADIUS = '22px';
+const TAIL_RADIUS = '6px';
+const SHADOW_LIGHT = '0 3px 10px rgba(0, 0, 0, 0.4)'; // Subtle lift
+const SHADOW_DEEP = '0 8px 25px rgba(0, 0, 0, 0.6)'; // Prominent lift
+
 const parameters = [
   { key: 'tensile_strength', label: 'Tensile Strength (kN/m)', prompt: 'What is the tensile strength? (e.g., 88.90)' },
   { key: 'puncture_resistance', label: 'Puncture Resistance (N)', prompt: 'Enter puncture resistance in Newtons (e.g., 1100)' },
@@ -11,14 +26,6 @@ const parameters = [
   { key: 'material_cost', label: 'Material Cost (PHP/m²)', prompt: 'Enter material cost in PHP per square meter (e.g., 158)' },
   { key: 'installation_cost', label: 'Installation Cost (PHP/m²)', prompt: 'Enter installation cost in PHP per square meter (e.g., 76)' }
 ];
-
-const MAROON_START = '#7B243B';
-const MAROON_END = '#99344E';
-const MEDIUM_DARK = '#1F1F1F';
-const DARK_BG = '#121212';
-const WHITE_TEXT = '#FFFFFF';
-const SUBTLE_TEXT = '#A0A0A0';
-
 
 const Chatbot = () => {
   const [messages, setMessages] = useState([
@@ -154,49 +161,48 @@ const Chatbot = () => {
     }
   }, [messages]);
 
-  // Define common style objects using constants
-  const defaultBubbleStyle = {
-    backgroundColor: MEDIUM_DARK,
-    borderRadius: '16px',
-    color: WHITE_TEXT,
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-  };
-  
-  const userBubbleStyle = {
-    backgroundImage: `linear-gradient(to right, ${MAROON_START}, ${MAROON_END})`,
-    borderRadius: '16px',
-    color: WHITE_TEXT,
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-  };
 
   return (
-    <div className="flex flex-col h-full bg-dark-bg text-light-text">
-      {/* HEADER Component */}
-      <div style={{ backgroundColor: MEDIUM_DARK, borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }} 
-           className="text-white p-6 text-center shadow-lg flex items-center justify-center space-x-4">
-        <svg className="w-10 h-10 text-maroon-end" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="flex flex-col h-full" style={{ backgroundColor: GLOBAL_BG_COLOR, color: LIGHT_TEXT_COLOR }}>
+      {/* HEADER Component: Full-width Gradient with Deep Shadow */}
+      <div 
+        style={{ 
+          backgroundImage: `linear-gradient(to right, ${MAROON_START_COLOR}, ${MAROON_END_COLOR})`,
+          boxShadow: SHADOW_DEEP 
+        }} 
+        className="p-6 text-center flex items-center justify-center space-x-4"
+      >
+        <svg className="w-10 h-10" style={{ color: LIGHT_TEXT_COLOR }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
         </svg>
         <div>
-          <h1 className="text-3xl font-bold mb-1">Geotextile Predictor</h1>
-          <p className="text-base text-subtle-text">AI-Powered Material Classification</p>
+          <h1 className="text-3xl font-bold mb-1" style={{ color: LIGHT_TEXT_COLOR }}>Geotextile Predictor</h1>
+          <p className="text-base" style={{ color: LIGHT_TEXT_COLOR }}>AI-Powered Material Classification</p>
         </div>
       </div>
-      {/* CHAT BODY */}
-      <div id="chat-container" className="flex-1 overflow-y-auto p-6 space-y-6 bg-dark-bg">
+      {/* CHAT BODY: Fills space, retaining the base dark color */}
+      <div id="chat-container" className="flex-1 overflow-y-auto p-6 space-y-6" style={{ backgroundColor: GLOBAL_BG_COLOR }}>
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div 
               style={msg.type === 'user' ? {
-                ...userBubbleStyle, 
-                borderBottomRightRadius: '4px' // Small radius for tail
+                // Maroon Gradient for emphasis
+                backgroundImage: `linear-gradient(to right, ${MAROON_START_COLOR}, ${MAROON_END_COLOR})`,
+                borderRadius: BUBBLE_RADIUS, 
+                borderBottomRightRadius: TAIL_RADIUS,
+                color: LIGHT_TEXT_COLOR,
+                boxShadow: SHADOW_DEEP 
               } : {
-                ...defaultBubbleStyle, 
-                borderBottomLeftRadius: '4px' // Small radius for tail
+                // Lighter dark grey background for layering effect
+                backgroundColor: COMPONENT_BG_COLOR, 
+                borderRadius: BUBBLE_RADIUS, 
+                borderBottomLeftRadius: TAIL_RADIUS, 
+                color: LIGHT_TEXT_COLOR,
+                boxShadow: SHADOW_LIGHT 
               }}
-              className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl px-5 py-4 text-base md:text-lg`}
+              className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl px-5 py-4 text-md`}
             >
-              <div className="whitespace-pre-line text-base md:text-lg lg:text-xl leading-relaxed" style={{ color: WHITE_TEXT }}>
+              <div className="whitespace-pre-line leading-relaxed" style={{ color: LIGHT_TEXT_COLOR }}>
                 {msg.text}
               </div>
             </div>
@@ -204,21 +210,27 @@ const Chatbot = () => {
         ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div style={defaultBubbleStyle} className="px-5 py-4 rounded-2xl rounded-bl-sm shadow-md">
+            <div 
+              style={{backgroundColor: COMPONENT_BG_COLOR, borderRadius: BUBBLE_RADIUS, borderBottomLeftRadius: TAIL_RADIUS, boxShadow: SHADOW_LIGHT}} 
+              className="px-5 py-4"
+            >
               <div className="flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-subtle-text"></div>
-                <span className="text-sm">Processing your request...</span>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{borderColor: SUBTLE_TEXT_COLOR}}></div>
+                <span className="text-sm" style={{color: LIGHT_TEXT_COLOR}}>Processing your request...</span>
               </div>
             </div>
           </div>
         )}
       </div>
-      {/* INTERACTIVE INPUT/BUTTONS */}
+      {/* INTERACTIVE INPUT/BUTTONS - Moved to float over chat area when needed */}
       {currentStep === parameters.length || currentStep === parameters.length + 1 || currentStep === parameters.length + 2 ? (
         // Confirmation/Restart/Edit Ask steps (Buttons embedded in a bubble)
-        <div className="flex justify-start p-4" style={{ backgroundColor: MEDIUM_DARK }}>
-          <div style={defaultBubbleStyle} className="px-5 py-4 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl rounded-2xl rounded-bl-sm shadow-md">
-            <div className="text-base leading-relaxed mb-3">
+        <div className="flex justify-start p-4" style={{ backgroundColor: GLOBAL_BG_COLOR, boxShadow: 'none' }}>
+          <div 
+            style={{backgroundColor: COMPONENT_BG_COLOR, borderRadius: BUBBLE_RADIUS, borderBottomLeftRadius: TAIL_RADIUS, boxShadow: SHADOW_LIGHT}} 
+            className="px-5 py-4 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl"
+          >
+            <div className="text-md leading-relaxed mb-3" style={{color: LIGHT_TEXT_COLOR}}>
               {currentStep === parameters.length ? 'Should I proceed with prediction?' : 
                currentStep === parameters.length + 1 ? 'Would you like to test another material?' : 
                'Would you like to edit a parameter?'}
@@ -226,16 +238,16 @@ const Chatbot = () => {
             <div className="flex space-x-2">
               <button
                 onClick={() => handleSubmit(null, 'yes')}
-                className="px-4 py-2 text-white rounded-lg hover:bg-maroon-start focus:outline-none focus:ring-2 focus:ring-white transition-all duration-200 shadow-sm"
-                style={{ backgroundColor: MAROON_END }}
+                className="px-4 py-2 text-white rounded-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-white transition-all duration-200"
+                style={{ backgroundColor: MAROON_END_COLOR, boxShadow: SHADOW_LIGHT }}
                 disabled={isLoading}
               >
                 Yes
               </button>
               <button
                 onClick={() => handleSubmit(null, 'no')}
-                className="px-4 py-2 text-medium-dark rounded-lg hover:bg-subtle-text/80 focus:outline-none focus:ring-2 focus:ring-white transition-all duration-200 shadow-sm"
-                style={{ backgroundColor: SUBTLE_TEXT, color: MEDIUM_DARK }}
+                className="px-4 py-2 rounded-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-white transition-all duration-200"
+                style={{ backgroundColor: SUBTLE_TEXT_COLOR, color: COMPONENT_BG_COLOR, boxShadow: SHADOW_LIGHT }}
                 disabled={isLoading}
               >
                 No
@@ -244,8 +256,8 @@ const Chatbot = () => {
           </div>
         </div>
       ) : (
-        // Standard Text Input
-        <div className="p-4" style={{ backgroundColor: MEDIUM_DARK }}>
+        // Standard Text Input (Input is NOT removed, but the "footer box" is visually gone)
+        <div className="p-6 pt-0" style={{ backgroundColor: GLOBAL_BG_COLOR, boxShadow: 'none' }}>
           <form onSubmit={handleSubmit} className="relative">
             <div className="flex justify-center">
               <div className="relative w-full max-w-sm md:max-w-md">
@@ -254,24 +266,22 @@ const Chatbot = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Type your response..."
-                  // Apply gradient and pill shape via inline styles
                   style={{ 
-                    backgroundImage: `linear-gradient(to right, ${MAROON_START}, ${MAROON_END})`,
-                    borderRadius: '50px', 
-                    color: WHITE_TEXT,
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-                    paddingLeft: '1.5rem', 
-                    paddingRight: '4rem', // Make room for the button
-                    border: 'none'
+                    backgroundImage: `linear-gradient(to right, ${MAROON_START_COLOR}, ${MAROON_END_COLOR})`,
+                    borderRadius: '30px', 
+                    color: LIGHT_TEXT_COLOR,
+                    boxShadow: SHADOW_DEEP, // Prominent shadow is kept
+                    padding: '1rem 4rem 1rem 1.5rem',
+                    border: 'none',
+                    fontSize: '1.05rem'
                   }}
-                  className="w-full px-6 py-4 focus:outline-none focus:ring-4 focus:ring-maroon-end transition-all duration-200 shadow-2xl placeholder-subtle-text"
+                  className="w-full focus:outline-none focus:ring-4 transition-all duration-200 placeholder-subtle-text"
                   disabled={isLoading}
                 />
                 <button
                   type="submit"
-                  // Accent button embedded in the input field
-                  style={{ backgroundColor: MAROON_START }}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 text-white rounded-full hover:bg-maroon-end focus:outline-none focus:ring-4 focus:ring-white transition-all duration-200 shadow-lg flex items-center justify-center"
+                  style={{ backgroundColor: MAROON_START_COLOR, boxShadow: SHADOW_LIGHT }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 text-white rounded-full hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-white transition-all duration-200 flex items-center justify-center"
                   disabled={isLoading}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
