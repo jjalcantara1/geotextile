@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 // --- Constants for enhanced depth and contrast ---
 const GLOBAL_BG_COLOR = '#1A1A1A'; // Base Background (Chat Body)
-const COMPONENT_BG_COLOR = '#3A3A3A'; // Component Surface (Bot Bubbles, Header Surface) - Significantly Lighter for contrast
+const COMPONENT_BG_COLOR = '#3A3A3A'; // Component Surface (Bot Bubbles ONLY)
 
 const LIGHT_TEXT_COLOR = '#E0E0E0'; // Off-white
 const SUBTLE_TEXT_COLOR = '#888888'; // Grey
@@ -164,20 +164,22 @@ const Chatbot = () => {
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: GLOBAL_BG_COLOR, color: LIGHT_TEXT_COLOR }}>
-      {/* HEADER Component: Full-width Gradient with Deep Shadow */}
+      {/* HEADER Component: Horizontal Layout, Sleek Padding, Gradient Background */}
       <div 
         style={{ 
           backgroundImage: `linear-gradient(to right, ${MAROON_START_COLOR}, ${MAROON_END_COLOR})`,
           boxShadow: SHADOW_DEEP 
         }} 
-        className="p-6 text-center flex items-center justify-center space-x-4"
+        className="p-6 text-center flex items-center justify-center space-x-4" // Reduced padding, horizontal flow
       >
+        {/* Icon */}
         <svg className="w-10 h-10" style={{ color: LIGHT_TEXT_COLOR }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
         </svg>
-        <div>
-          <h1 className="text-3xl font-bold mb-1" style={{ color: LIGHT_TEXT_COLOR }}>Geotextile Predictor</h1>
-          <p className="text-base" style={{ color: LIGHT_TEXT_COLOR }}>AI-Powered Material Classification</p>
+        {/* Title/Subtitle Container */}
+        <div className="text-left">
+          <h1 className="text-3xl font-bold" style={{ color: LIGHT_TEXT_COLOR }}>Geotextile Predictor</h1>
+          <p className="text-base opacity-80" style={{ color: LIGHT_TEXT_COLOR }}>AI-Powered Material Classification</p>
         </div>
       </div>
       {/* CHAT BODY: Fills space, retaining the base dark color */}
@@ -193,7 +195,7 @@ const Chatbot = () => {
                 color: LIGHT_TEXT_COLOR,
                 boxShadow: SHADOW_DEEP 
               } : {
-                // Lighter dark grey background for layering effect
+                // Dark Grey Background for layering effect
                 backgroundColor: COMPONENT_BG_COLOR, 
                 borderRadius: BUBBLE_RADIUS, 
                 borderBottomLeftRadius: TAIL_RADIUS, 
@@ -222,7 +224,7 @@ const Chatbot = () => {
           </div>
         )}
       </div>
-      {/* INTERACTIVE INPUT/BUTTONS - Moved to float over chat area when needed */}
+      {/* INTERACTIVE INPUT/BUTTONS - Placed at the bottom without a wrapper box */}
       {currentStep === parameters.length || currentStep === parameters.length + 1 || currentStep === parameters.length + 2 ? (
         // Confirmation/Restart/Edit Ask steps (Buttons embedded in a bubble)
         <div className="flex justify-start p-4" style={{ backgroundColor: GLOBAL_BG_COLOR, boxShadow: 'none' }}>
