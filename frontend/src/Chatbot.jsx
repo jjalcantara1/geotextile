@@ -43,7 +43,7 @@ const Chatbot = () => {
     if (e) e.preventDefault();
     const userInput = value || input.trim().toLowerCase();
     if (!userInput.trim()) return;
-    setMessages(prev => [...prev, { type: 'user', text: input }]);
+    setMessages(prev => [...prev, { type: 'user', text: userInput }]);
 
     if (currentStep < parameters.length) {
       // Collecting parameters
@@ -165,17 +165,20 @@ const Chatbot = () => {
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: GLOBAL_BG_COLOR, color: LIGHT_TEXT_COLOR }}>
       {/* HEADER Component: Horizontal Layout, Sleek Padding, Gradient Background */}
-      <div 
-        style={{ 
+      <div
+        style={{
           backgroundImage: `linear-gradient(to right, ${MAROON_START_COLOR}, ${MAROON_END_COLOR})`,
-          boxShadow: SHADOW_DEEP 
-        }} 
+          boxShadow: SHADOW_DEEP
+        }}
         className="p-6 text-center flex items-center justify-center space-x-4" // Reduced padding, horizontal flow
       >
-        {/* Icon */}
-        <svg className="w-10 h-10" style={{ color: LIGHT_TEXT_COLOR }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-        </svg>
+        {/* Logo */}
+        <img
+          src="/maroon.png"
+          alt="Geotextile Predictor Logo"
+          className="w-12 h-12 rounded-full border-2 border-white shadow-lg"
+          style={{ objectFit: 'cover', backgroundColor: 'white' }}
+        />
         {/* Title/Subtitle Container */}
         <div className="text-left">
           <h1 className="text-3xl font-bold" style={{ color: LIGHT_TEXT_COLOR }}>Geotextile Predictor</h1>
