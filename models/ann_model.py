@@ -15,19 +15,19 @@ class ANNModel:
     def build_model(self):
         """Build the ANN model."""
         self.model = Sequential([
-            Dense(256, input_dim=self.input_dim),
+            Dense(128, input_dim=self.input_dim),
             LeakyReLU(alpha=0.1),
             Dropout(0.25),
 
-            Dense(128),
+            Dense(64),
             LeakyReLU(alpha=0.1),
             Dropout(0.2),
 
-            Dense(64),
+            Dense(32),
             LeakyReLU(alpha=0.1),
             Dropout(0.15),
 
-            Dense(32),
+            Dense(16),
             LeakyReLU(alpha=0.1),
             Dense(self.num_classes, activation='softmax')
         ])

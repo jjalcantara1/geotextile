@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 from preprocessors.data_preprocessor import DataPreprocessor
 from scalers.scaler import DataScaler
 from models.ann_model import ANNModel
@@ -25,8 +26,11 @@ def main():
     # Scale the new data
     new_data_scaled = scaler.transform(new_data)
 
-    # Predict
-    predictions = ann_model.model.predict(new_data_scaled)
+    # Predict with temperature scaling to reduce overconfidence
+    logits = ann_model.model.predict(new_data_scaled, verbose=0)
+    temperature = 2.0  # Temperature scaling factor
+    scaled_logits = logits / temperature
+    predictions = tf.nn.softmax(scaled_logits).numpy()
     predicted_class_idx = np.argmax(predictions, axis=1)[0]
     confidence = np.max(predictions, axis=1)[0] * 100
 

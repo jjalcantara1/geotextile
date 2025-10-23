@@ -5,7 +5,7 @@ from sklearn.metrics import precision_score, recall_score, f1_score, mean_square
 from preprocessors.data_preprocessor import DataPreprocessor
 from scalers.scaler import DataScaler
 from models.ann_model import ANNModel
-from dataset.constants import MODEL_SAVE_PATH
+from dataset.constants import MODEL_SAVE_PATH, EPOCHS, BATCH_SIZE
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 
 # ======= Reproducibility =======
@@ -45,9 +45,9 @@ def main():
     history = ann_model.model.fit(
         X_train_scaled, y_train,
         validation_data=(X_val_scaled, y_val),
-        epochs=50,  # or replace with your EPOCHS constant
-        batch_size=32,  # or use BATCH_SIZE constant
-        callbacks=[lr_scheduler],
+        epochs=EPOCHS,
+        batch_size=BATCH_SIZE,
+        callbacks=[early_stopping, lr_scheduler],
         verbose=1
     )
 
