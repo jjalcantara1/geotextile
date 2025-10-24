@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
-/* * CRITICAL FIX: Aggressively enforce maroon gradient background and screen coverage.
+/* * CRITICAL FIX: Aggressively enforce white background with maroon accents and screen coverage.
  * This overrides all browser and framework defaults.
  */
 html, body, #root {
-  background: linear-gradient(to bottom, #6A1C2F, #000000) !important;
+  background: white !important;
   height: 100vh;
   width: 100vw;
   max-width: none !important;
@@ -14,16 +14,21 @@ html, body, #root {
   font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* Ensure ALL text is light, allowing components to manage their specific colors */
+/* Ensure ALL text is very dark gray (black-like), allowing components to manage their specific colors */
 * {
-    color: #FFFFFF !important;
-    box-sizing: border-box; 
+    color: #333333 !important;
+    box-sizing: border-box;
 }
 
 /* Specific text color for subtle elements */
 .text-subtle-text {
-    color: #888888 !important;
+    color: #666666 !important;
 }
 .placeholder-subtle-text::placeholder {
-    color: #888888 !important;
+    color: #666666 !important;
+}
+
+/* Title color override */
+h1 {
+    color: #800000 !important;
 }

@@ -7,15 +7,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        // --- Dark Mode Palette ---
-        'dark-bg': '#0D0D0D',          // Even darker background for more contrast
-        'medium-dark': '#1A1A1A',      // Slightly lighter dark for components (Bot Messages, Header Base, Input Base)
-        'light-text': '#E0E0E0',       // Off-white for main text (softer than pure white)
-        'subtle-text': '#888888',      // More subtle grey for secondary/placeholder text
-        
-        // --- Maroon Gradient/Accent Colors ---
-        'maroon-start': '#6A1C2F',     // Deeper, richer maroon for gradient start
-        'maroon-end': '#8C2D43',       // Slightly brighter for gradient end
+        // --- Light Mode Palette ---
+        'light-bg': '#FFFFFF',         // White background for primary
+        'component-bg': '#F5F5F5',     // Light gray for components (Bot Messages, Header Base, Input Base)
+        'dark-text': '#333333',        // Dark gray for main text (high readability)
+        'subtle-text': '#666666',      // Subtle gray for secondary/placeholder text
+
+        // --- Muted Red Accent ---
+        'muted-red': '#800000',        // Muted red for accents (replacing maroon gradients)
       },
       borderRadius: {
         'bubble': '22px', // Larger, softer radius for chat bubbles

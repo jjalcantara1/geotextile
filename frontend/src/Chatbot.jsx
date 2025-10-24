@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
 
-// --- Constants for enhanced depth and contrast ---
-const GLOBAL_BG_COLOR = 'linear-gradient(to bottom, #6A1C2F, #000000)'; // Simple red to black gradient
-const COMPONENT_BG_COLOR = '#3A3A3A'; // Component Surface (Bot Bubbles ONLY)
+// --- Constants for light theme ---
+const GLOBAL_BG_COLOR = '#f2f0f0ff'; // White background
+const COMPONENT_BG_COLOR = '#F5F5F5'; // Light gray for components
 
-const LIGHT_TEXT_COLOR = '#E0E0E0'; // Off-white
-const SUBTLE_TEXT_COLOR = '#888888'; // Grey
-const MAROON_START_COLOR = '#6A1C2F'; // Maroon
-const MAROON_END_COLOR = '#6A1C2F'; // Maroon
+const LIGHT_TEXT_COLOR = '#000000'; // Black for main text
+const SUBTLE_TEXT_COLOR = '#4b4b4bff'; // Subtle gray
+const MAROON_START_COLOR = '#efc0c0ff'; // Lighter maroon
+const MAROON_END_COLOR = '#efc0c0ff'; // Lighter maroon
 
 // Design Constants for shape and shadow
 const BUBBLE_RADIUS = '22px';
 const TAIL_RADIUS = '6px';
-const SHADOW_LIGHT = '0 3px 10px rgba(0, 0, 0, 0.4)'; // Subtle lift
-const SHADOW_DEEP = '0 8px 25px rgba(0, 0, 0, 0.6)'; // Prominent lift
+const SHADOW_LIGHT = '0 3px 10px rgba(69, 2, 2, 0.65)'; // Subtle lift
+const SHADOW_DEEP = '0 4px 15px rgba(111, 2, 2, 0.4)'; // Less prominent lift
 
 const parameters = [
   { key: 'tensile_strength', label: 'Tensile Strength (kN/m)', prompt: 'What is the tensile strength? (e.g., 88.90)' },
@@ -29,7 +29,7 @@ const parameters = [
 
 const Chatbot = () => {
   const [messages, setMessages] = useState([
-    { type: 'bot', text: 'Hello! I\'m your Geotextile Predictor Assistant. I\'ll help you estimate the geotextile type based on your input parameters. Let\'s begin!' },
+    { type: 'bot', text: 'Hello! I\'m your Geotextile Classifier Assistant. I\'ll help you classify the geotextile type based on your input parameters. Let\'s begin!' },
     { type: 'bot', text: parameters[0].prompt }
   ]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -66,7 +66,7 @@ const Chatbot = () => {
       } else {
         // All parameters collected, confirm
         console.log('All parameters collected, moving to confirmation');
-        setMessages(prev => [...prev, { type: 'bot', text: 'Here\'s what you entered:\n\n' + Object.entries(newData).map(([k, v]) => `${parameters.find(p => p.key === k).label}: ${v}`).join('\n') + '\n\nShould I proceed with prediction? (yes/no)' }]);
+        setMessages(prev => [...prev, { type: 'bot', text: 'Here\'s what you entered:\n\n' + Object.entries(newData).map(([k, v]) => `${parameters.find(p => p.key === k).label}: ${v}`).join('\n') + '\n\nShould I proceed with classification? (yes/no)' }]);
         setCurrentStep(currentStep + 1); // Move to confirmation step
       }
     } else if (currentStep === parameters.length) {
@@ -84,7 +84,7 @@ const Chatbot = () => {
           const result = await response.json();
           console.log('Response data:', result);
           setMessages(prev => [...prev,
-            { type: 'bot', text: `Prediction Complete!\nPredicted Geotextile Type: ${result.predicted_type}\nConfidence Score: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material? (yes/no)` }
+            { type: 'bot', text: `Classification Complete!\nClassified Geotextile Type: ${result.predicted_type}\nConfidence Score: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material? (yes/no)` }
           ]);
           setCurrentStep(currentStep + 1); // Move to restart step
         } catch (error) {
@@ -128,11 +128,11 @@ const Chatbot = () => {
         setCurrentStep(0);
         setData({});
         setMessages([
-          { type: 'bot', text: 'Hello! I\'m your Geotextile Predictor Assistant. I\'ll help you estimate the geotextile type based on your input parameters. Let\'s begin!' },
+          { type: 'bot', text: 'Hello! I\'m your Geotextile Classifier Assistant. I\'ll help you classify the geotextile type based on your input parameters. Let\'s begin!' },
           { type: 'bot', text: parameters[0].prompt }
         ]);
       } else if (userInput === 'no') {
-        setMessages(prev => [...prev, { type: 'bot', text: 'Thank you for using the Geotextile Predictor! Goodbye.' }]);
+        setMessages(prev => [...prev, { type: 'bot', text: 'Thank you for using the Geotextile Classifier! Goodbye.' }]);
       } else {
         setMessages(prev => [...prev, { type: 'bot', text: 'Please reply with "yes" or "no".' }]);
       }
@@ -147,7 +147,7 @@ const Chatbot = () => {
       const newData = { ...data, [editingParam]: value };
       setData(newData);
       setEditingParam(null);
-      setMessages(prev => [...prev, { type: 'bot', text: 'Parameter updated! Here\'s the updated data:\n\n' + Object.entries(newData).map(([k, v]) => `${parameters.find(p => p.key === k).label}: ${v}`).join('\n') + '\n\nShould I proceed with prediction? (yes/no)' }]);
+          setMessages(prev => [...prev, { type: 'bot', text: 'Parameter updated! Here\'s the updated data:\n\n' + Object.entries(newData).map(([k, v]) => `${parameters.find(p => p.key === k).label}: ${v}`).join('\n') + '\n\nShould I proceed with classification? (yes/no)' }]);
       setCurrentStep(parameters.length); // Back to confirmation step
     }
     setInput('');
@@ -163,47 +163,51 @@ const Chatbot = () => {
 
 
   return (
-    <div className="flex flex-col h-full" style={{ backgroundColor: GLOBAL_BG_COLOR, color: LIGHT_TEXT_COLOR }}>
-      {/* HEADER Component: Horizontal Layout, Sleek Padding, Gradient Background */}
+    <div className="flex flex-col h-full" style={{
+      backgroundColor: GLOBAL_BG_COLOR,
+      backgroundImage: `url("data:image/svg+xml,${encodeURIComponent('<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><path d="M0 100 Q50 50 100 100 T200 100" stroke="#e0b3b3" stroke-width="1" fill="none" opacity="0.2"/><path d="M0 120 Q50 70 100 120 T200 120" stroke="#e0b3b3" stroke-width="1" fill="none" opacity="0.2"/></svg>')}")`,
+      backgroundRepeat: 'repeat',
+      color: LIGHT_TEXT_COLOR
+    }}>
+      {/* HEADER Component: Horizontal Layout, Sleek Padding, Transparent Background */}
       <div
         style={{
-          backgroundImage: `linear-gradient(to right, ${MAROON_START_COLOR}, ${MAROON_END_COLOR})`,
-          boxShadow: SHADOW_DEEP
+          backgroundColor: 'transparent'
         }}
         className="p-6 flex items-center justify-start space-x-4" // Reduced padding, horizontal flow
       >
         {/* Logo */}
         <img
           src="/maroon.png"
-          alt="Geotextile Predictor Logo"
-          className="w-12 h-12 rounded-full border-2 border-white shadow-lg"
-          style={{ objectFit: 'cover', backgroundColor: 'white' }}
+          alt="Geotextile Classifier Logo"
+          className="w-12 h-12"
+          style={{ objectFit: 'cover', backgroundColor: 'transparent' }}
         />
         {/* Title/Subtitle Container */}
         <div className="text-left">
-          <h1 className="text-3xl font-bold" style={{ color: LIGHT_TEXT_COLOR }}>Geotextile Predictor</h1>
+          <h1 className="text-3xl font-bold">Geotextile Classifier</h1>
           <p className="text-base opacity-80" style={{ color: LIGHT_TEXT_COLOR }}>AI-Powered Material Classification</p>
         </div>
       </div>
-      {/* CHAT BODY: Fills space, retaining the base dark color */}
-      <div id="chat-container" className="flex-1 overflow-y-auto p-6 space-y-6" style={{ backgroundColor: GLOBAL_BG_COLOR }}>
+      {/* CHAT BODY: Fills space, transparent background */}
+      <div id="chat-container" className="flex-1 overflow-y-auto p-6 space-y-6" style={{ backgroundColor: 'transparent' }}>
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div 
+            <div
               style={msg.type === 'user' ? {
                 // Maroon Gradient for emphasis
                 backgroundImage: `linear-gradient(to right, ${MAROON_START_COLOR}, ${MAROON_END_COLOR})`,
-                borderRadius: BUBBLE_RADIUS, 
+                borderRadius: BUBBLE_RADIUS,
                 borderBottomRightRadius: TAIL_RADIUS,
-                color: LIGHT_TEXT_COLOR,
-                boxShadow: SHADOW_DEEP 
+                color: 'white',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.6)'
               } : {
                 // Dark Grey Background for layering effect
-                backgroundColor: COMPONENT_BG_COLOR, 
-                borderRadius: BUBBLE_RADIUS, 
-                borderBottomLeftRadius: TAIL_RADIUS, 
+                backgroundColor: COMPONENT_BG_COLOR,
+                borderRadius: BUBBLE_RADIUS,
+                borderBottomLeftRadius: TAIL_RADIUS,
                 color: LIGHT_TEXT_COLOR,
-                boxShadow: SHADOW_LIGHT 
+                boxShadow: SHADOW_LIGHT
               }}
               className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl px-5 py-4 text-md`}
             >
@@ -230,14 +234,14 @@ const Chatbot = () => {
       {/* INTERACTIVE INPUT/BUTTONS - Placed at the bottom without a wrapper box */}
       {currentStep === parameters.length || currentStep === parameters.length + 1 || currentStep === parameters.length + 2 ? (
         // Confirmation/Restart/Edit Ask steps (Buttons embedded in a bubble)
-        <div className="flex justify-start p-4" style={{ backgroundColor: GLOBAL_BG_COLOR, boxShadow: 'none' }}>
+        <div className="flex justify-start p-4" style={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
           <div 
             style={{backgroundColor: COMPONENT_BG_COLOR, borderRadius: BUBBLE_RADIUS, borderBottomLeftRadius: TAIL_RADIUS, boxShadow: SHADOW_LIGHT}} 
             className="px-5 py-4 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl"
           >
             <div className="text-md leading-relaxed mb-3" style={{color: LIGHT_TEXT_COLOR}}>
-              {currentStep === parameters.length ? 'Should I proceed with prediction?' : 
-               currentStep === parameters.length + 1 ? 'Would you like to test another material?' : 
+              {currentStep === parameters.length ? 'Should I proceed with classification?' :
+               currentStep === parameters.length + 1 ? 'Would you like to test another material?' :
                'Would you like to edit a parameter?'}
             </div>
             <div className="flex space-x-2">
@@ -252,7 +256,7 @@ const Chatbot = () => {
               <button
                 onClick={() => handleSubmit(null, 'no')}
                 className="px-4 py-2 rounded-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-white transition-all duration-200"
-                style={{ backgroundColor: SUBTLE_TEXT_COLOR, color: COMPONENT_BG_COLOR, boxShadow: SHADOW_LIGHT }}
+                style={{ backgroundColor: '#FFFFFF', color: LIGHT_TEXT_COLOR, boxShadow: SHADOW_LIGHT }}
                 disabled={isLoading}
               >
                 No
@@ -272,7 +276,7 @@ const Chatbot = () => {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Type your response..."
                   style={{
-                    backgroundImage: `linear-gradient(to right, ${MAROON_START_COLOR}, ${MAROON_END_COLOR})`,
+                    backgroundColor: '#FFFFFF',
                     borderRadius: '30px',
                     color: LIGHT_TEXT_COLOR,
                     boxShadow: SHADOW_DEEP, // Prominent shadow is kept
