@@ -3,7 +3,7 @@ import tensorflow as tf
 from preprocessors.data_preprocessor import DataPreprocessor
 from scalers.scaler import DataScaler
 from models.ann_model import ANNModel
-from dataset.constants import MODEL_SAVE_PATH
+from dataset.constants import MODEL_SAVE_PATH, VAL_LOGITS_PATH, VAL_LABELS_PATH
 
 def main():
     # Initialize components
@@ -23,11 +23,20 @@ def main():
     # Example new data (using one from the sample dataset for demo)
     new_data = np.array([[20.9, 1431.47, 1.099, 94.2, 40, 0, 71.2, 62.15, 27.4]])  # Recycled PET Nonwoven
 
+    # Apply log transformation to skewed features (same as in preprocessing)
+    skewed_indices = [0, 1, 7, 8]  # Indices for Tensile Strength, Puncture Resistance, Material Cost, Installation Cost
+    for idx in skewed_indices:
+        new_data[0, idx] = np.log1p(new_data[0, idx])
+
     # Scale the new data
     new_data_scaled = scaler.transform(new_data)
 
-    # Predict with temperature scaling
-    predictions = ann_model.predict_with_temperature(new_data_scaled, temperature=2.0)
+    # Load validation data for Platt scaling
+    val_logits = np.load(VAL_LOGITS_PATH)
+    val_labels = np.load(VAL_LABELS_PATH)
+
+    # Predict with Platt scaling
+    predictions = ann_model.predict_with_platt_scaling(new_data_scaled, val_logits, val_labels)
     predicted_class_idx = np.argmax(predictions, axis=1)[0]
     confidence = np.max(predictions, axis=1)[0] * 100
 

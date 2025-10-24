@@ -5,7 +5,7 @@ from sklearn.metrics import precision_score, recall_score, f1_score, mean_square
 from preprocessors.data_preprocessor import DataPreprocessor
 from scalers.scaler import DataScaler
 from models.ann_model import ANNModel
-from dataset.constants import MODEL_SAVE_PATH, EPOCHS, BATCH_SIZE
+from dataset.constants import MODEL_SAVE_PATH, EPOCHS, BATCH_SIZE, VAL_LOGITS_PATH, VAL_LABELS_PATH
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 
 # ======= Reproducibility =======
@@ -53,6 +53,12 @@ def main():
 
     # Save model
     ann_model.save_model(MODEL_SAVE_PATH)
+
+    # Save validation logits and labels for Platt scaling
+    logits_model = ann_model.get_logits_model()
+    val_logits = logits_model.predict(X_val_scaled, verbose=0)
+    np.save(VAL_LOGITS_PATH, val_logits)
+    np.save(VAL_LABELS_PATH, y_val)
 
     # Evaluate on test set
     test_loss, test_accuracy, test_precision, test_recall = ann_model.model.evaluate(X_test_scaled, y_test, verbose=0)

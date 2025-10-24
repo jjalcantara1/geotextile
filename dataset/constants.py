@@ -14,3 +14,7 @@ EARLY_STOPPING_PATIENCE = 10
 
 # Model save path
 MODEL_SAVE_PATH = os.path.join(os.path.dirname(__file__), '..', 'models', 'geotextile_ann.keras')
+
+# Validation data save paths for Platt scaling
+VAL_LOGITS_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'models', 'val_logits.npy'))
+VAL_LABELS_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'models', 'val_labels.npy'))

@@ -118,20 +118,18 @@ class ANNModel:
         from sklearn.linear_model import LogisticRegression
         from sklearn.preprocessing import StandardScaler
 
-        # Get logits for validation data
-        logits_model = self.get_logits_model()
-        val_logits_pred = logits_model.predict(val_logits, verbose=0)
-
+        # val_logits is already the logits from validation set
         # Fit Platt scaling (logistic regression on logits)
         scaler = StandardScaler()
-        val_logits_scaled = scaler.fit_transform(val_logits_pred.reshape(-1, 1))
+        val_logits_scaled = scaler.fit_transform(val_logits)
 
-        platt_model = LogisticRegression(random_state=42)
+        platt_model = LogisticRegression(random_state=42, multi_class='ovr')
         platt_model.fit(val_logits_scaled, val_labels.argmax(axis=1))
 
         # Predict on new data
+        logits_model = self.get_logits_model()
         logits = logits_model.predict(X, verbose=0)
-        logits_scaled = scaler.transform(logits.reshape(-1, 1))
+        logits_scaled = scaler.transform(logits)
         calibrated_probs = platt_model.predict_proba(logits_scaled)
 
         return calibrated_probs

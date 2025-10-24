@@ -84,7 +84,7 @@ const Chatbot = () => {
           const result = await response.json();
           console.log('Response data:', result);
           setMessages(prev => [...prev,
-            { type: 'bot', text: `Prediction Complete!\n🧵 Predicted Geotextile Type: ${result.predicted_type}\n📈 Confidence: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material? (yes/no)` }
+            { type: 'bot', text: `Prediction Complete!\nPredicted Geotextile Type: ${result.predicted_type}\nConfidence Score: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material? (yes/no)` }
           ]);
           setCurrentStep(currentStep + 1); // Move to restart step
         } catch (error) {

@@ -7,7 +7,7 @@ import tensorflow as tf
 from preprocessors.data_preprocessor import DataPreprocessor
 from scalers.scaler import DataScaler
 from models.ann_model import ANNModel
-from dataset.constants import MODEL_SAVE_PATH
+from dataset.constants import MODEL_SAVE_PATH, VAL_LOGITS_PATH, VAL_LABELS_PATH
 from logger import setup_logger
 
 app = FastAPI()
@@ -34,6 +34,10 @@ scaler.fit(X_train)
 num_classes = len(preprocessor.get_class_names())
 ann_model = ANNModel(input_dim=9, num_classes=num_classes)
 ann_model.load_model(MODEL_SAVE_PATH)
+
+# Load validation data for Platt scaling
+val_logits = np.load(VAL_LOGITS_PATH)
+val_labels = np.load(VAL_LABELS_PATH)
 
 class_names = preprocessor.get_class_names()
 
@@ -70,11 +74,16 @@ def predict(request: PredictionRequest):
     # Convert to numpy array
     new_data = np.array(request.features).reshape(1, -1)
 
+    # Apply log transformation to skewed features (same as in preprocessing)
+    skewed_indices = [0, 1, 7, 8]  # Indices for Tensile Strength, Puncture Resistance, Material Cost, Installation Cost
+    for idx in skewed_indices:
+        new_data[0, idx] = np.log1p(new_data[0, idx])
+
     # Scale the new data
     new_data_scaled = scaler.transform(new_data)
 
-    # Predict with temperature scaling
-    predictions = ann_model.predict_with_temperature(new_data_scaled, temperature=2.0)
+    # Predict with Platt scaling
+    predictions = ann_model.predict_with_platt_scaling(new_data_scaled, val_logits, val_labels)
     predicted_class_idx = int(np.argmax(predictions, axis=1)[0])
     confidence = float(np.max(predictions, axis=1)[0] * 100)
 
