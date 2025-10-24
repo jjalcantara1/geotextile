@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 
 // --- Constants for enhanced depth and contrast ---
-const GLOBAL_BG_COLOR = '#1A1A1A'; // Base Background (Chat Body)
+const GLOBAL_BG_COLOR = 'linear-gradient(to bottom, #6A1C2F, #000000)'; // Simple red to black gradient
 const COMPONENT_BG_COLOR = '#3A3A3A'; // Component Surface (Bot Bubbles ONLY)
 
 const LIGHT_TEXT_COLOR = '#E0E0E0'; // Off-white
 const SUBTLE_TEXT_COLOR = '#888888'; // Grey
-const MAROON_START_COLOR = '#6A1C2F'; // Deep maroon
-const MAROON_END_COLOR = '#8C2D43'; // Brighter maroon
+const MAROON_START_COLOR = '#6A1C2F'; // Maroon
+const MAROON_END_COLOR = '#6A1C2F'; // Maroon
 
 // Design Constants for shape and shadow
 const BUBBLE_RADIUS = '22px';
@@ -170,7 +170,7 @@ const Chatbot = () => {
           backgroundImage: `linear-gradient(to right, ${MAROON_START_COLOR}, ${MAROON_END_COLOR})`,
           boxShadow: SHADOW_DEEP
         }}
-        className="p-6 text-center flex items-center justify-center space-x-4" // Reduced padding, horizontal flow
+        className="p-6 flex items-center justify-start space-x-4" // Reduced padding, horizontal flow
       >
         {/* Logo */}
         <img
@@ -262,7 +262,7 @@ const Chatbot = () => {
         </div>
       ) : (
         // Standard Text Input (Input is NOT removed, but the "footer box" is visually gone)
-        <div className="p-6 pt-0" style={{ backgroundColor: GLOBAL_BG_COLOR, boxShadow: 'none' }}>
+        <div className="p-0 pb-6" style={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
           <form onSubmit={handleSubmit} className="relative">
             <div className="flex justify-center">
               <div className="relative w-full max-w-sm md:max-w-md">
@@ -271,9 +271,9 @@ const Chatbot = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Type your response..."
-                  style={{ 
+                  style={{
                     backgroundImage: `linear-gradient(to right, ${MAROON_START_COLOR}, ${MAROON_END_COLOR})`,
-                    borderRadius: '30px', 
+                    borderRadius: '30px',
                     color: LIGHT_TEXT_COLOR,
                     boxShadow: SHADOW_DEEP, // Prominent shadow is kept
                     padding: '1rem 4rem 1rem 1.5rem',
