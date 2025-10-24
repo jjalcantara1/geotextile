@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 import numpy as np
+import tensorflow as tf
 from preprocessors.data_preprocessor import DataPreprocessor
 from scalers.scaler import DataScaler
 from models.ann_model import ANNModel
@@ -38,15 +39,15 @@ class_names = preprocessor.get_class_names()
 
 # Brief descriptions for each type (you can expand these)
 descriptions = {
-    'Recycled PET Nonwoven': 'A nonwoven geotextile made from recycled PET, offering good filtration and cost-effectiveness.',
-    'PET Woven': 'Woven geotextile from PET, known for high tensile strength and durability.',
-    'Hybrid (PP+Coir)': 'Hybrid material combining polypropylene and coir, providing strength and biodegradability.',
-    'PP Woven': 'Polypropylene woven geotextile, excellent for reinforcement and separation.',
-    'Glass Fiber Composite': 'Composite with glass fibers, ideal for high-strength applications.',
-    'PP Nonwoven': 'Nonwoven polypropylene geotextile, versatile for drainage and filtration.',
-    'Coir Woven': 'Woven coir geotextile, biodegradable and eco-friendly.',
-    'PLA Nonwoven': 'Nonwoven from PLA, a bio-based polymer with good environmental profile.',
-    'HDPE Grid': 'HDPE geogrid, used for soil stabilization and reinforcement.'
+    'Recycled PET Nonwoven': 'Recycled PET Nonwoven is a nonwoven geotextile made from recycled PET, offering good filtration and cost-effectiveness.',
+    'PET Woven': 'PET Woven is a woven geotextile from PET, known for high tensile strength and durability.',
+    'Hybrid (PP+Coir)': 'Hybrid (PP+Coir) is a hybrid material combining polypropylene and coir, providing strength and biodegradability.',
+    'PP Woven': 'PP Woven is a polypropylene woven geotextile, excellent for reinforcement and separation.',
+    'Glass Fiber Composite': 'Glass Fiber Composite is a composite with glass fibers, ideal for high-strength applications.',
+    'PP Nonwoven': 'PP Nonwoven is a nonwoven polypropylene geotextile, versatile for drainage and filtration.',
+    'Coir Woven': 'Coir Woven is a woven coir geotextile, biodegradable and eco-friendly.',
+    'PLA Nonwoven': 'PLA Nonwoven is a nonwoven from PLA, a bio-based polymer with good environmental profile.',
+    'HDPE Grid': 'HDPE Grid is an HDPE geogrid, used for soil stabilization and reinforcement.'
 }
 
 class PredictionRequest(BaseModel):
@@ -72,8 +73,8 @@ def predict(request: PredictionRequest):
     # Scale the new data
     new_data_scaled = scaler.transform(new_data)
 
-    # Predict
-    predictions = ann_model.model.predict(new_data_scaled)
+    # Predict with temperature scaling
+    predictions = ann_model.predict_with_temperature(new_data_scaled, temperature=10.0)
     predicted_class_idx = int(np.argmax(predictions, axis=1)[0])
     confidence = float(np.max(predictions, axis=1)[0] * 100)
 

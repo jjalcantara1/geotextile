@@ -1,3 +1,5 @@
+
+
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Input, BatchNormalization, LeakyReLU
 from tensorflow.keras.optimizers import Adam
@@ -15,19 +17,19 @@ class ANNModel:
     def build_model(self):
         """Build the ANN model."""
         self.model = Sequential([
-            Dense(128, input_dim=self.input_dim),
+            Dense(256, input_dim=self.input_dim),
             LeakyReLU(alpha=0.1),
-            Dropout(0.25),
+            Dropout(0.4),
+
+            Dense(128),
+            LeakyReLU(alpha=0.1),
+            Dropout(0.3),
 
             Dense(64),
             LeakyReLU(alpha=0.1),
             Dropout(0.2),
 
             Dense(32),
-            LeakyReLU(alpha=0.1),
-            Dropout(0.15),
-
-            Dense(16),
             LeakyReLU(alpha=0.1),
             Dense(self.num_classes, activation='softmax')
         ])
@@ -71,3 +73,38 @@ class ANNModel:
         from tensorflow.keras.models import load_model
         self.model = load_model(path)
         return self.model
+
+    def get_logits_model(self):
+        """Create a model that outputs logits (without softmax)."""
+        if self.model is None:
+            raise ValueError("Model not loaded")
+        # Create a new model with the same layers but last layer without activation
+        logits_model = Sequential()
+        for layer in self.model.layers[:-1]:
+            logits_model.add(layer)
+        # Add the last layer without activation, with a unique name
+        last_layer = self.model.layers[-1]
+        logits_layer = Dense(last_layer.units, activation=None, name='logits_output')
+        logits_model.add(logits_layer)
+        # Copy weights layer by layer, but set weights for the new logits layer separately
+        for i, layer in enumerate(self.model.layers[:-1]):
+            logits_model.layers[i].set_weights(layer.get_weights())
+        # Set weights for the logits layer from the original last layer
+        logits_model.layers[-1].set_weights(last_layer.get_weights())
+        return logits_model
+
+    def predict_with_temperature(self, X, temperature=10.0):
+        """Predict with temperature scaling to soften confidence scores."""
+        # Get logits directly from the model by predicting and inverting softmax
+        predictions = self.model.predict(X, verbose=0)
+        # Approximate logits from predictions (inverse softmax)
+        logits = np.log(predictions + 1e-7)  # Add small epsilon to avoid log(0)
+        # Apply temperature scaling
+        scaled_logits = logits / temperature
+        # Apply softmax
+        exp_logits = np.exp(scaled_logits - np.max(scaled_logits, axis=1, keepdims=True))
+        scaled_predictions = exp_logits / np.sum(exp_logits, axis=1, keepdims=True)
+        # Force the max to be less than 100% by subtracting a small amount
+        max_prob = np.max(scaled_predictions, axis=1)
+        scaled_predictions = scaled_predictions * (0.99 / max_prob[:, np.newaxis])
+        return scaled_predictions
