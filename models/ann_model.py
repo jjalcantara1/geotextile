@@ -86,14 +86,16 @@ class ANNModel:
         last_layer = self.model.layers[-1]
         logits_layer = Dense(last_layer.units, activation=None, name='logits_output')
         logits_model.add(logits_layer)
+        # Build the model to initialize weights
+        logits_model.build((None, self.input_dim))
         # Copy weights layer by layer, but set weights for the new logits layer separately
         for i, layer in enumerate(self.model.layers[:-1]):
             logits_model.layers[i].set_weights(layer.get_weights())
-        # Set weights for the logits layer from the original last layer
+        # Set weights for the logits layer from the original last layer (kernel and bias)
         logits_model.layers[-1].set_weights(last_layer.get_weights())
         return logits_model
 
-    def predict_with_temperature(self, X, temperature=10.0):
+    def predict_with_temperature(self, X, temperature=2.0):
         """Predict with temperature scaling to soften confidence scores."""
         # Get logits directly from the model by predicting and inverting softmax
         predictions = self.model.predict(X, verbose=0)
@@ -104,7 +106,32 @@ class ANNModel:
         # Apply softmax
         exp_logits = np.exp(scaled_logits - np.max(scaled_logits, axis=1, keepdims=True))
         scaled_predictions = exp_logits / np.sum(exp_logits, axis=1, keepdims=True)
-        # Force the max to be less than 100% by subtracting a small amount
-        max_prob = np.max(scaled_predictions, axis=1)
-        scaled_predictions = scaled_predictions * (0.99 / max_prob[:, np.newaxis])
         return scaled_predictions
+
+    def predict_with_platt_scaling(self, X, val_logits=None, val_labels=None):
+        """Predict with Platt scaling calibration."""
+        if val_logits is None or val_labels is None:
+            # If no validation data provided, fall back to temperature scaling
+            return self.predict_with_temperature(X, temperature=2.0)
+
+        # Fit logistic regression on validation logits
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.preprocessing import StandardScaler
+
+        # Get logits for validation data
+        logits_model = self.get_logits_model()
+        val_logits_pred = logits_model.predict(val_logits, verbose=0)
+
+        # Fit Platt scaling (logistic regression on logits)
+        scaler = StandardScaler()
+        val_logits_scaled = scaler.fit_transform(val_logits_pred.reshape(-1, 1))
+
+        platt_model = LogisticRegression(random_state=42)
+        platt_model.fit(val_logits_scaled, val_labels.argmax(axis=1))
+
+        # Predict on new data
+        logits = logits_model.predict(X, verbose=0)
+        logits_scaled = scaler.transform(logits.reshape(-1, 1))
+        calibrated_probs = platt_model.predict_proba(logits_scaled)
+
+        return calibrated_probs

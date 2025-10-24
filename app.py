@@ -74,7 +74,7 @@ def predict(request: PredictionRequest):
     new_data_scaled = scaler.transform(new_data)
 
     # Predict with temperature scaling
-    predictions = ann_model.predict_with_temperature(new_data_scaled, temperature=10.0)
+    predictions = ann_model.predict_with_temperature(new_data_scaled, temperature=2.0)
     predicted_class_idx = int(np.argmax(predictions, axis=1)[0])
     confidence = float(np.max(predictions, axis=1)[0] * 100)
 
