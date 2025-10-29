@@ -1,52 +1,81 @@
 import numpy as np
+import pandas as pd
 import tensorflow as tf
-from preprocessors.data_preprocessor import DataPreprocessor
-from scalers.scaler import DataScaler
-from models.ann_model import ANNModel
-from dataset.constants import MODEL_SAVE_PATH, VAL_LOGITS_PATH, VAL_LABELS_PATH
+import joblib
+import json
 
-def main():
-    # Initialize components
-    preprocessor = DataPreprocessor()
-    scaler = DataScaler()
+def predict_cluster_input(input_clusters):
+    """
+    Predict geotextile type from 9 cluster-based parameters.
+    Example input:
+    {
+        "Tensile Cluster": "C3",
+        "Puncture Cluster": "C2",
+        "Permittivity Cluster": "C1",
+        "Filtration Cluster": "C3",
+        "Recycled Cluster": "C4",
+        "Biobased Cluster": "C2",
+        "UV Cluster": "C3",
+        "Material Cost Cluster": "C2",
+        "Install Cost Cluster": "C1"
+    }
+    """
 
-    # Preprocess data first to fit encoder
-    X_train, _, _, _, _, _ = preprocessor.preprocess()
-    scaler.fit(X_train)
+    # Load model, encoder, and feature metadata
+    model = tf.keras.models.load_model("models/geotextile_ann.keras")
+    encoder = joblib.load("models/label_encoder.pkl")
 
-    num_classes = len(preprocessor.get_class_names())
-    ann_model = ANNModel(input_dim=9, num_classes=num_classes)
+    with open("models/feature_columns.json", "r") as f:
+        feature_columns = json.load(f)
 
-    # Load model
-    ann_model.load_model(MODEL_SAVE_PATH)
+    # Convert input into DataFrame
+    df_input = pd.DataFrame([input_clusters])
 
-    # Example new data (using one from the sample dataset for demo)
-    new_data = np.array([[20.9, 1431.47, 1.099, 94.2, 40, 0, 71.2, 62.15, 27.4]])  # Recycled PET Nonwoven
+    # One-hot encode using same cluster columns
+    df_encoded = pd.get_dummies(df_input)
 
-    # Apply log transformation to skewed features (same as in preprocessing)
-    skewed_indices = [0, 1, 7, 8]  # Indices for Tensile Strength, Puncture Resistance, Material Cost, Installation Cost
-    for idx in skewed_indices:
-        new_data[0, idx] = np.log1p(new_data[0, idx])
+    # Add missing columns and align order
+    for col in feature_columns:
+        if col not in df_encoded.columns:
+            df_encoded[col] = 0
+    df_encoded = df_encoded[feature_columns]
 
-    # Scale the new data
-    new_data_scaled = scaler.transform(new_data)
+    # Convert to numeric numpy array
+    X_input = df_encoded.to_numpy(dtype=np.float32)
 
-    # Load validation data for Platt scaling
-    val_logits = np.load(VAL_LOGITS_PATH)
-    val_labels = np.load(VAL_LABELS_PATH)
+    # Predict
+    y_pred = model.predict(X_input)
 
-    # Predict with Platt scaling
-    predictions = ann_model.predict_with_platt_scaling(new_data_scaled, val_logits, val_labels)
-    predicted_class_idx = np.argmax(predictions, axis=1)[0]
-    confidence = np.max(predictions, axis=1)[0] * 100
+    # Convert prediction to label
+    predicted_index = np.argmax(y_pred, axis=1)
+    # Convert class index to one-hot vector
+    one_hot = np.zeros((1, encoder.categories_[0].shape[0]))
+    one_hot[0, predicted_index[0]] = 1
 
-    # Get class names
-    class_names = preprocessor.get_class_names()
-    predicted_type = class_names[predicted_class_idx]
+    # Decode the class name
+    predicted_class = encoder.inverse_transform(one_hot)[0][0]
 
-    # Output
-    print(f"Predicted Geotextile Type: {predicted_type}")
-    print(f"Confidence Score: {confidence:.1f}%")
+
+    # Print results
+    print("\n===============================")
+    print(f"🧠 Predicted Geotextile Type: {predicted_class}")
+    print(f"Confidence Scores (%): {np.max(y_pred) * 100:.2f}%")    
+    print("===============================")
+
+    return predicted_class
+
 
 if __name__ == "__main__":
-    main()
+    new_input = {
+        "Tensile Cluster": "C3",
+        "Puncture Cluster": "C2",
+        "Permittivity Cluster": "C1",
+        "Filtration Cluster": "C3",
+        "Recycled Cluster": "C4",
+        "Biobased Cluster": "C2",
+        "UV Cluster": "C3",
+        "Material Cost Cluster": "C2",
+        "Install Cost Cluster": "C1"
+    }
+
+    predict_cluster_input(new_input)
