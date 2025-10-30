@@ -29,7 +29,8 @@ const priorities = [
       {
         bot: "Ready to choose how strong the fabric needs to be?",
         options: [
-          { text: "Yes, let’s start", clusters: [] }
+          { text: "Yes, let’s start", clusters: [] },
+          { text: "Not now", skip: true }
         ]
       },
       {
@@ -385,6 +386,7 @@ const Chatbot = () => {
   const [showRemainingPriorities, setShowRemainingPriorities] = useState(false);
   const [hasSkipped, setHasSkipped] = useState(false);
   const [predictionTriggered, setPredictionTriggered] = useState(false);
+  const [initialDecision, setInitialDecision] = useState(null);
 
 
   const scrollToBottom = () => {
@@ -451,61 +453,10 @@ const Chatbot = () => {
   const handleOptionSelect = async (option) => {
     setMessages((prev) => [...prev, { type: "user", text: option.text }]);
     if (option.skip) {
-      // Mark this priority as completed (skipped)
-      const newCompleted = new Set([...completedPriorities, priorities[currentPriorityIndex].key]);
-      setCompletedPriorities(newCompleted);
-      // Show remaining priorities for user to choose
-      setMessages((prev) => [...prev, { type: "bot", text: "Okay, let's skip that. Which priority would you like to focus on next?" }]);
-      const remaining = priorities.filter(p => !newCompleted.has(p.key));
-      if (remaining.length > 0) {
-        setCurrentPriorityIndex(-1);
-        setShowRemainingPriorities(true);
-      } else {
-        // All done, proceed with prediction
-        const newModes = {};
-        priorities.forEach(p => {
-          newModes[p.key] = getMode(selectedClusters[p.key] || []);
-        });
-        setModes(newModes);
-        setPredictionTriggered(true);
-        setIsLoading(true);
-        try {
-          const clusterKeyMap = {
-            tensile_strength: "Tensile Cluster",
-            puncture_resistance: "Puncture Cluster",
-            permittivity: "Permittivity Cluster",
-            filtration_efficiency: "Filtration Cluster",
-            recycled_content: "Recycled Cluster",
-            biobased_content: "Biobased Cluster",
-            uv_strength: "UV Cluster",
-            material_cost: "Material Cost Cluster",
-            installation_cost: "Install Cost Cluster"
-          };
-          const clusters = {};
-          priorities.forEach(p => {
-            clusters[clusterKeyMap[p.key]] = newModes[p.key];
-          });
-          const response = await fetch("http://localhost:8000/predict", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ clusters }),
-          });
-          const result = await response.json();
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "bot",
-              text: `Prediction complete!\n\nPredicted Geotextile Type: ${result.predicted_type}\nConfidence: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material?`,
-            },
-          ]);
-          setAwaitingRestart(true);
-        } catch (err) {
-          console.error(err);
-          setMessages((prev) => [...prev, { type: "bot", text: "Error connecting to backend." }]);
-        } finally {
-          setIsLoading(false);
-        }
-      }
+      // Put back in choices, don't mark as completed
+      setMessages((prev) => [...prev, { type: "bot", text: "Okay, let's skip that for now. Which priority would you like to focus on next?" }]);
+      setCurrentPriorityIndex(-1);
+      setShowRemainingPriorities(true);
     } else {
       // Normal option
       const key = priorities[currentPriorityIndex].key;
@@ -522,55 +473,34 @@ const Chatbot = () => {
         const newCompleted = new Set([...completedPriorities, key]);
         setCompletedPriorities(newCompleted);
         if (newCompleted.size === priorities.length) {
-          // All priorities handled, proceed with prediction
+          // All priorities handled, show summary
           const newModes = {};
           priorities.forEach(p => {
             newModes[p.key] = getMode(selectedClusters[p.key] || []);
           });
           setModes(newModes);
-          setPredictionTriggered(true);
-          setIsLoading(true);
-          try {
-            const clusterKeyMap = {
-              tensile_strength: "Tensile Cluster",
-              puncture_resistance: "Puncture Cluster",
-              permittivity: "Permittivity Cluster",
-              filtration_efficiency: "Filtration Cluster",
-              recycled_content: "Recycled Cluster",
-              biobased_content: "Biobased Cluster",
-              uv_strength: "UV Cluster",
-              material_cost: "Material Cost Cluster",
-              installation_cost: "Install Cost Cluster"
-            };
-            const clusters = {};
-            priorities.forEach(p => {
-              clusters[clusterKeyMap[p.key]] = newModes[p.key];
-            });
-            const response = await fetch("http://localhost:8000/predict", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ clusters }),
-            });
-            const result = await response.json();
-            setMessages((prev) => [
-              ...prev,
-              {
-                type: "bot",
-                text: `Prediction complete!\n\nPredicted Geotextile Type: ${result.predicted_type}\nConfidence: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material?`,
-              },
-            ]);
-            setAwaitingRestart(true);
-          } catch (err) {
-            console.error(err);
-            setMessages((prev) => [...prev, { type: "bot", text: "Error connecting to backend." }]);
-          } finally {
-            setIsLoading(false);
-          }
+          setShowSummary(true);
+          const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${clusterDescriptions[newModes[p.key]] || newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
+          setMessages((prev) => [...prev, { type: "bot", text: summary }]);
         } else {
-          // Show remaining priorities
-          setCurrentPriorityIndex(-1);
-          setShowRemainingPriorities(true);
-          setMessages((prev) => [...prev, { type: "bot", text: "Okay, priority completed. Which priority would you like to focus on next?" }]);
+          // Auto-proceed to next incomplete priority in natural order
+          const nextPriorityIndex = priorities.findIndex(p => !newCompleted.has(p.key));
+          if (nextPriorityIndex !== -1) {
+            setCurrentPriorityIndex(nextPriorityIndex);
+            setCurrentSubStep(0);
+            const firstStep = priorities[nextPriorityIndex].subflow[0];
+            setMessages((prev) => [...prev, { type: "bot", text: firstStep.bot }]);
+          } else {
+            // All priorities completed, show summary
+            const newModes = {};
+            priorities.forEach(p => {
+              newModes[p.key] = getMode(selectedClusters[p.key] || []);
+            });
+            setModes(newModes);
+            setShowSummary(true);
+            const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${clusterDescriptions[newModes[p.key]] || newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
+            setMessages((prev) => [...prev, { type: "bot", text: summary }]);
+          }
         }
       }
     }
@@ -590,7 +520,7 @@ const Chatbot = () => {
       });
       setModes(newModes);
       setShowSummary(true);
-      const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
+            const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
       setMessages((prev) => [...prev, { type: "bot", text: summary }]);
     }
   };
