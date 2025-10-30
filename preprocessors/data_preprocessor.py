@@ -147,6 +147,10 @@ class DataPreprocessor:
         # One-hot encode cluster columns
         df_encoded = pd.get_dummies(df_clusters, columns=cluster_columns)
 
+        # Do not add missing columns; use only present ones to match trained model
+        present_columns = [col for col in df_encoded.columns if col != self.target_column]
+        df_encoded = df_encoded[present_columns + [self.target_column]]
+
         # Drop target column to form X, ensure all numeric
         X = df_encoded.drop(columns=[self.target_column]).astype(float).values
 

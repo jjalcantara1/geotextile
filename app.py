@@ -1,20 +1,23 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import Dict
 import numpy as np
+import pandas as pd
 import tensorflow as tf
+import json
 from preprocessors.data_preprocessor import DataPreprocessor
 from scalers.scaler import DataScaler
 from models.ann_model import ANNModel
 from dataset.constants import MODEL_SAVE_PATH, VAL_LOGITS_PATH, VAL_LABELS_PATH
 from logger import setup_logger
 
+
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,7 +58,7 @@ descriptions = {
 }
 
 class PredictionRequest(BaseModel):
-    features: List[float]
+    clusters: Dict[str, str]
 
 @app.get("/welcome")
 def welcome(request: Request):
@@ -66,21 +69,37 @@ def welcome(request: Request):
     return {"message": "Welcome to the Geotextile Predictor API!"}
 
 @app.post("/predict")
-def predict(request: PredictionRequest):
-    print("Received prediction request with features:", request.features)
-    if len(request.features) != 9:
-        raise HTTPException(status_code=400, detail="Exactly 9 features required")
+def predict(request: Request, request_data: PredictionRequest):
+    logger.info(f"Request received: {request.method} {request.url.path} with clusters: {request_data.clusters}")
 
-    # Convert to numpy array
-    new_data = np.array(request.features).reshape(1, -1)
+    # Convert input into DataFrame
+    df_input = pd.DataFrame([request_data.clusters])
 
-    # Apply log transformation to skewed features (same as in preprocessing)
-    skewed_indices = [0, 1, 7, 8]  # Indices for Tensile Strength, Puncture Resistance, Material Cost, Installation Cost
-    for idx in skewed_indices:
-        new_data[0, idx] = np.log1p(new_data[0, idx])
+    # One-hot encode using same cluster columns
+    df_encoded = pd.get_dummies(df_input)
+
+    # Align to the training feature columns (42 features)
+    # Get the present columns from training preprocessing
+    from preprocessors.data_preprocessor import DataPreprocessor
+    p = DataPreprocessor()
+    p.load_data()
+    df = p.assign_clusters(p.df)
+    cluster_columns = ['Tensile Cluster', 'Puncture Cluster', 'Permittivity Cluster', 'Filtration Cluster', 'Recycled Cluster', 'Biobased Cluster', 'UV Cluster', 'Material Cost Cluster', 'Install Cost Cluster']
+    df_clusters = df[cluster_columns + ['Type']].copy()
+    df_train_encoded = pd.get_dummies(df_clusters, columns=cluster_columns)
+    train_columns = [col for col in df_train_encoded.columns if col != 'Type']
+
+    # Add missing columns as 0 and reorder to match training
+    for col in train_columns:
+        if col not in df_encoded.columns:
+            df_encoded[col] = 0
+    df_encoded = df_encoded[train_columns]
+
+    # Convert to numeric numpy array
+    X_input = df_encoded.to_numpy(dtype=np.float32)
 
     # Scale the new data
-    new_data_scaled = scaler.transform(new_data)
+    new_data_scaled = scaler.transform(X_input)
 
     # Predict with Platt scaling
     predictions = ann_model.predict_with_platt_scaling(new_data_scaled, val_logits, val_labels)
@@ -90,7 +109,7 @@ def predict(request: PredictionRequest):
     predicted_type = class_names[predicted_class_idx]
     description = descriptions.get(predicted_type, "No description available")
 
-    print("Predicted:", predicted_type, "Confidence:", confidence)
+    logger.info(f"Predicted: {predicted_type}, Confidence: {confidence}")
     return {
         "predicted_type": str(predicted_type),
         "confidence": round(confidence, 2),

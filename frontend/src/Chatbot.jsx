@@ -11,138 +11,388 @@ const BUBBLE_RADIUS = "22px";
 const SHADOW_LIGHT = "0 3px 10px rgba(69, 2, 2, 0.65)";
 const SHADOW_DEEP = "0 4px 15px rgba(111, 2, 2, 0.4)";
 
+// --- Cluster Descriptions ---
+const clusterDescriptions = {
+  C1: "Low",
+  C2: "Moderate",
+  C3: "Balanced",
+  C4: "High",
+  C5: "Very High"
+};
 
-// --- Parameter + Cluster Data ---
-const parameters = [
+// --- Priorities and Subflows ---
+const priorities = [
   {
     key: "tensile_strength",
-    label: "Tensile Strength (kN/m)",
-    prompt: "Select the cluster for Tensile Strength:",
-    clusters: [
-      { id: "C1", name: "Low Strength", range: "0–30 kN/m", desc: "Landscaping, temporary erosion control, lightweight drainage layers." },
-      { id: "C2", name: "Medium Strength", range: "31–60 kN/m", desc: "Subgrade separation in rural roads, light-duty roads." },
-      { id: "C3", name: "High Strength", range: "61–120 kN/m", desc: "Reinforcement of paved roads, embankment stabilization." },
-      { id: "C4", name: "Very High Strength", range: "121–200 kN/m", desc: "Retaining walls, heavy-duty highways, soft soil improvement." },
-      { id: "C5", name: "Ultra High Strength", range: ">200 kN/m", desc: "Critical structures, mining haul roads, high embankments." },
-    ],
+    label: "Handle traffic/loads (Tensile Strength)",
+    subflow: [
+      {
+        bot: "Ready to choose how strong the fabric needs to be?",
+        options: [
+          { text: "Yes, let’s start", clusters: [] }
+        ]
+      },
+      {
+        bot: "To size up the fabric strength, tell me about the traffic and ground.",
+        options: [{ text: "Okay", clusters: [] }]
+      },
+      {
+        bot: "Who will pass over it in the first year?",
+        options: [
+          { text: "People only (Footpaths/landscaping; negligible wheel loads)", clusters: ["C1"] },
+          { text: "Light vehicles (cars/pickups)", clusters: ["C2"] },
+          { text: "Mixed traffic (cars + trucks)", clusters: ["C3"] },
+          { text: "Heavy trucks/frequent loading", clusters: ["C4"] },
+          { text: "Extreme/heavy industry (Mining/ports)", clusters: ["C5"] },
+        ]
+      },
+      {
+        bot: "What’s the ground like where the fabric sits?",
+        options: [
+          { text: "Firm soil (compacts well)", clusters: ["C1", "C2"] },
+          { text: "Soft in places", clusters: ["C2", "C3"] },
+          { text: "Very soft/wet (rutting risk)", clusters: ["C4", "C5"] },
+        ]
+      },
+      {
+        bot: "How long should it perform (design life)?",
+        options: [
+          { text: "Temporary (<6 months)", clusters: ["C1"] },
+          { text: "Short-term (6–24 months)", clusters: ["C2"] },
+          { text: "Long-term (2–10 years)", clusters: ["C3", "C4"] },
+          { text: "Long-term critical (10+ years)", clusters: ["C5"] },
+        ]
+      },
+      {
+        bot: "What’s the project type?",
+        options: [
+          { text: "Slope or embankment support", clusters: ["C1"] },
+          { text: "Road over weak subgrade", clusters: ["C2"] },
+          { text: "Drainage trench backfill", clusters: ["C3"] },
+          { text: "Retaining/MSE wall", clusters: ["C4", "C5"] },
+        ]
+      },
+      {
+        bot: "Comfort level (safety margin vs. cost)?",
+        options: [
+          { text: "Practical & economical", clusters: ["C1", "C2"] },
+          { text: "Balanced safety & cost", clusters: ["C3", "C4"] },
+          { text: "Extra margin / future-proof", clusters: ["C5"] },
+        ]
+      },
+    ]
   },
   {
     key: "puncture_resistance",
-    label: "Puncture Resistance (N)",
-    prompt: "Select the cluster for Puncture Resistance:",
-    clusters: [
-      { id: "C1", name: "Low Resistance", range: "≤ 600 N", desc: "Light separation, erosion control, vegetated slopes." },
-      { id: "C2", name: "Medium Resistance", range: "601–1000 N", desc: "Subgrade stabilization for light vehicle paths." },
-      { id: "C3", name: "High Resistance", range: "1001–1400 N", desc: "Urban roads, temporary working platforms." },
-      { id: "C4", name: "Very High Resistance", range: "1401–1800 N", desc: "Pavement base reinforcement, embankments." },
-      { id: "C5", name: "Ultra High Resistance", range: ">1800 N", desc: "Reinforced earth structures, heavy-duty traffic zones." },
-    ],
+    label: "Resist sharp stones & tears (Puncture Resistance)",
+    subflow: [
+      {
+        bot: "Let's move on to the location of your textile.",
+        options: [
+          { text: "Okay", clusters: [] },
+          { text: "Not now", skip: true }
+        ]
+      },
+      {
+        bot: "What will the fabric rest on when you lay it down?",
+        options: [
+          { text: "Smooth sand/soil", clusters: ["C1"] },
+          { text: "Small rounded gravel", clusters: ["C2"] },
+          { text: "Crushed gravel (sharp edges)", clusters: ["C3"] },
+          { text: "Big sharp stones / riprap", clusters: ["C4"] },
+          { text: "Mixed debris (concrete bits, nails, glass)", clusters: ["C5"] },
+        ]
+      },
+      {
+        bot: "Will any machine roll on the fabric before it’s covered?",
+        options: [
+          { text: "No—covered right away", clusters: ["C1", "C2"] },
+          { text: "Maybe—slow and careful only", clusters: ["C3", "C4"] },
+          { text: "Yes—trucks/loaders will pass", clusters: ["C5"] },
+        ]
+      },
+    ]
   },
   {
     key: "permittivity",
-    label: "Permittivity (s⁻¹)",
-    prompt: "Select the cluster for Permittivity:",
-    clusters: [
-      { id: "C1", name: "Very Low", range: "≤ 0.2 s⁻¹", desc: "Reinforcement with minimal flow, base stabilization." },
-      { id: "C2", name: "Low", range: "0.21–0.5 s⁻¹", desc: "Separation with controlled flow, coarse soils." },
-      { id: "C3", name: "Moderate", range: "0.51–1.0 s⁻¹", desc: "General drainage, moderate rainfall zones." },
-      { id: "C4", name: "High", range: "1.01–1.5 s⁻¹", desc: "High-permeability filters, soft soils." },
-      { id: "C5", name: "Very High", range: ">1.5 s⁻¹", desc: "Rapid drainage, flood-prone zones, underdrains." },
-    ],
+    label: "Let water pass easily (Permittivity)",
+    subflow: [
+      {
+        bot: "Let's set the amount of water passing through these fabrics.",
+        options: [
+          { text: "Alright!", clusters: [] },
+          { text: "Not now", skip: true }
+        ]
+      },
+      {
+        bot: "How does water usually behave here?",
+        options: [
+          { text: "Mostly dry", clusters: ["C1"] },
+          { text: "Sometimes wet after rain", clusters: ["C2"] },
+          { text: "Often damp; slow seepage", clusters: ["C3"] },
+          { text: "Water rises fast or drops fast", clusters: ["C4"] },
+          { text: "Standing water during storms", clusters: ["C5"] },
+        ]
+      },
+      {
+        bot: "Surface cover and traffic over the fabric?",
+        options: [
+          { text: "No vehicular traffic", clusters: ["C1", "C2"] },
+          { text: "Light/slow traffic", clusters: ["C3"] },
+          { text: "Heavy cover or frequent wetting", clusters: ["C4"] },
+          { text: "Under drains/swales", clusters: ["C5"] },
+        ]
+      },
+    ]
   },
   {
     key: "filtration_efficiency",
-    label: "Filtration Efficiency (%)",
-    prompt: "Select the cluster for Filtration Efficiency:",
-    clusters: [
-      { id: "C1", name: "Low", range: "≤ 75%", desc: "Temporary applications, basic separation." },
-      { id: "C2", name: "Moderate", range: "76–85%", desc: "General soil separation, stable soils." },
-      { id: "C3", name: "High", range: "86–90%", desc: "Urban road filtration, culverts." },
-      { id: "C4", name: "Very High", range: "91–95%", desc: "Fine silty soils, sensitive drainage." },
-      { id: "C5", name: "Ultra High", range: ">95%", desc: "Critical water treatment, coastal filters." },
-    ],
+    label: "Keep soil from escaping/clogging (Filtration Efficiency)",
+    subflow: [
+      {
+        bot: "Ready to make sure the fabric lets water pass but keeps soil in?",
+        options: [
+          { text: "Yes, let’s start", clusters: [] },
+          { text: "Not now", skip: true }
+        ]
+      },
+      {
+        bot: "“Filtration efficiency” means how well the fabric holds back soil while letting water through. Higher % = less soil loss.",
+        options: [{ text: "Got it!", clusters: [] }]
+      },
+      {
+        bot: "What does the soil feel like?",
+        options: [
+          { text: "Gritty (sand)", clusters: ["C1", "C2"] },
+          { text: "Slightly powdery", clusters: ["C3"] },
+          { text: "Silky/muddy", clusters: ["C4", "C5"] },
+        ]
+      },
+      {
+        bot: "What are you protecting from soil wash-through?",
+        options: [
+          { text: "Nothing critical", clusters: ["C1", "C2"] },
+          { text: "Road base/subdrain", clusters: ["C3"] },
+          { text: "Sensitive drain/pipe", clusters: ["C4"] },
+          { text: "Water treatment/coastal edge", clusters: ["C5"] },
+        ]
+      },
+    ]
   },
   {
     key: "recycled_content",
-    label: "Recycled Content (%)",
-    prompt: "Select the cluster for Recycled Content:",
-    clusters: [
-      { id: "C1", name: "Virgin Material", range: "0%", desc: "Traditional PP/PET geotextiles." },
-      { id: "C2", name: "Low Recycled", range: "1–30%", desc: "Minimal environmental impact, some sustainability." },
-      { id: "C3", name: "Moderate Recycled", range: "31–60%", desc: "Balanced environmental and structural performance." },
-      { id: "C4", name: "High Recycled", range: "61–99%", desc: "Strong sustainability focus, check strength tradeoffs." },
-      { id: "C5", name: "Fully Recycled", range: "100%", desc: "Circular economy materials, sustainability prioritized." },
-    ],
+    label: "Use recycled materials (Recycled Content)",
+    subflow: [
+      {
+        bot: "Want to set your sustainability preference? (How much recycled plastic is in the fabric.)",
+        options: [
+          { text: "Yes, let’s set it", clusters: [] },
+          { text: "Not now", skip: true }
+        ]
+      },
+      {
+        bot: "Higher recycled content = greener footprint, but can narrow product choices. What matters most?",
+        options: [{ text: "Let’s find out", clusters: [] }]
+      },
+      {
+        bot: "How important is “made from recycled plastic”?",
+        options: [
+          { text: "Nice to have", clusters: ["C1", "C2"] },
+          { text: "Important", clusters: ["C3", "C4"] },
+          { text: "Must have", clusters: ["C5"] },
+        ]
+      },
+      {
+        bot: "If fewer eco options exist, what should we favor?",
+        options: [
+          { text: "Performance first", clusters: ["C1", "C2"] },
+          { text: "Balanced", clusters: ["C3"] },
+          { text: "Green first", clusters: ["C4", "C5"] },
+        ]
+      },
+    ]
   },
   {
     key: "biobased_content",
-    label: "Biobased Content (%)",
-    prompt: "Select the cluster for Biobased Content:",
-    clusters: [
-      { id: "C1", name: "Non-Biobased", range: "0%", desc: "Petroleum-based synthetics (PP, PET, HDPE)." },
-      { id: "C2", name: "Low Biobased", range: "1–30%", desc: "Partially blended PP + natural fibers." },
-      { id: "C3", name: "Moderate Biobased", range: "31–70%", desc: "Emerging composites, experimental blends." },
-      { id: "C4", name: "High Biobased", range: "71–99%", desc: "Mostly natural-fiber or PLA-based materials." },
-      { id: "C5", name: "Fully Biobased", range: "100%", desc: "Jute, coir, PLA – biodegradable geotextiles." },
-    ],
+    label: "Use plant-based/natural fibers (Biobased Content)",
+    subflow: [
+      {
+        bot: "🌿 Do you want plant-based/natural fibers (jute/coir) or regular plastics?",
+        options: [
+          { text: "Yes, set preference", clusters: [] },
+          { text: "Not now", skip: true }
+        ]
+      },
+      {
+        bot: "How important is “plant-based” for this project?",
+        options: [
+          { text: "Nice to have", clusters: ["C1", "C2"] },
+          { text: "Important", clusters: ["C3", "C4"] },
+          { text: "Must have", clusters: ["C5"] },
+        ]
+      },
+      {
+        bot: "How long must it last on-site?",
+        options: [
+          { text: "10+ years", clusters: ["C1"] },
+          { text: "3–10 years", clusters: ["C2"] },
+          { text: "1–2 years", clusters: ["C3"] },
+          { text: "Months", clusters: ["C4"] },
+          { text: "Weeks", clusters: ["C5"] },
+        ]
+      },
+    ]
   },
   {
     key: "uv_strength",
-    label: "UV Strength Retained (% after 500h)",
-    prompt: "Select the cluster for UV Strength Retained:",
-    clusters: [
-      { id: "C1", name: "Very Low", range: "≤ 30%", desc: "Highly degradable, natural fibers like jute/coir." },
-      { id: "C2", name: "Low", range: "31–50%", desc: "Moderate vulnerability, natural-synthetic hybrids." },
-      { id: "C3", name: "Moderate", range: "51–70%", desc: "Standard UV resistance for most synthetics." },
-      { id: "C4", name: "High", range: "71–85%", desc: "UV-stabilized synthetics, woven PET/PP." },
-      { id: "C5", name: "Very High", range: ">85%", desc: "Premium coated materials, long-life geotextiles." },
-    ],
+    label: "Hold strength under sunlight (UV Strength Retained after 500h)",
+    subflow: [
+      {
+        bot: "☀️ Sunlight weakens fabric. Let’s set UV toughness.",
+        options: [
+          { text: "Yes, let’s set it", clusters: [] },
+          { text: "No, not now", skip: true }
+        ]
+      },
+      {
+        bot: "How long will it sit in the sun before being covered?",
+        options: [
+          { text: "Few days (<1 week)", clusters: ["C1", "C2"] },
+          { text: "1–4 weeks", clusters: ["C3"] },
+          { text: "1 month", clusters: ["C4"] },
+          { text: "Not sure", clusters: ["C5"] },
+        ]
+      },
+      {
+        bot: "Weather during installation?",
+        options: [
+          { text: "Cloudy/rainy", clusters: ["C1", "C2", "C3"] },
+          { text: "Mix of sun and clouds", clusters: ["C4"] },
+          { text: "Hot/dry", clusters: ["C5"] },
+        ]
+      },
+      {
+        bot: "Fabric type preference (if known)?",
+        options: [
+          { text: "Natural/plant-based (jute/coir)", clusters: ["C1", "C2"] },
+          { text: "Standard plastic (PP/PET)", clusters: ["C3"] },
+          { text: "UV-stabilized / dark-colored", clusters: ["C4", "C5"] },
+        ]
+      },
+    ]
   },
   {
     key: "material_cost",
-    label: "Material Cost (PHP/m²)",
-    prompt: "Select the cluster for Material Cost:",
-    clusters: [
-      { id: "C1", name: "Low Cost", range: "≤ PHP 100/m²", desc: "Lightweight nonwovens, coir/jute mats." },
-      { id: "C2", name: "Moderate Cost", range: "PHP 101–200/m²", desc: "Basic woven geotextiles, hybrid blends." },
-      { id: "C3", name: "High Cost", range: "PHP 201–400/m²", desc: "Reinforcement-grade PP/PET fabrics." },
-      { id: "C4", name: "Very High Cost", range: "PHP 401–700/m²", desc: "Composite or geogrid-enhanced fabrics." },
-      { id: "C5", name: "Ultra High Cost", range: "> PHP 700/m²", desc: "Premium, specialized, export-grade types." },
-    ],
+    label: "Lower fabric price (₱/m²) (Material Cost)",
+    subflow: [
+      {
+        bot: "💸 Let’s set a budget for fabric cost (₱/m²).",
+        options: [
+          { text: "Yes, set budget", clusters: [] },
+          { text: "No, not now", skip: true }
+        ]
+      },
+      {
+        bot: "Pick your price band:",
+        options: [
+          { text: "≤ ₱100 — Low (light nonwovens, coir/jute)", clusters: ["C1"] },
+          { text: "₱101–₱200 — Moderate (basic woven)", clusters: ["C2"] },
+          { text: "₱201–₱400 — High (reinforcement-grade PP/PET)", clusters: ["C3"] },
+          { text: "₱401–₱700 — Very High (composites/geogrid)", clusters: ["C4"] },
+          { text: "₱700 — Ultra (specialized/export-grade)", clusters: ["C5"] },
+        ]
+      },
+      {
+        bot: "Do you need fast delivery?",
+        options: [
+          { text: "ASAP", clusters: ["C5"] },
+          { text: "Flexible", clusters: ["C1"] },
+        ]
+      },
+    ]
   },
   {
     key: "installation_cost",
-    label: "Installation Cost (PHP/m²)",
-    prompt: "Select the cluster for Installation Cost:",
-    clusters: [
-      { id: "C1", name: "Low Cost", range: "≤ PHP 50/m²", desc: "Manual placement, erosion blankets." },
-      { id: "C2", name: "Moderate Cost", range: "PHP 51–100/m²", desc: "Routine rolls for subgrade support." },
-      { id: "C3", name: "High Cost", range: "PHP 101–200/m²", desc: "Reinforcement under pavements." },
-      { id: "C4", name: "Very High Cost", range: "PHP 201–350/m²", desc: "Composite installations, constrained sites." },
-      { id: "C5", name: "Ultra High Cost", range: "> PHP 350/m²", desc: "MSE, steep slopes, geogrid anchoring." },
-    ],
+    label: "Easier/cheaper to install (₱/m²) (Installation Cost)",
+    subflow: [
+      {
+        bot: "🛠️ Let’s set installation budget (₱/m²).",
+        options: [
+          { text: "Yes, set install budget", clusters: [] },
+          { text: "No, not now", skip: true }
+        ]
+      },
+      {
+        bot: "Pick your install cost band:",
+        options: [
+          { text: "≤ ₱50 — Low (manual/erosion blankets)", clusters: ["C1"] },
+          { text: "₱51–₱100 — Moderate (routine rolls)", clusters: ["C2"] },
+          { text: "₱101–₱200 — High (reinforcement; precise seams)", clusters: ["C3"] },
+          { text: "₱201–₱350 — Very High (tight/confined sites)", clusters: ["C4"] },
+          { text: "₱350 — Ultra (MSE/slopes; high QA)", clusters: ["C5"] },
+        ]
+      },
+      {
+        bot: "What does the work area look like?",
+        options: [
+          { text: "Wide open", clusters: ["C1", "C2"] },
+          { text: "Some tight corners", clusters: ["C3"] },
+          { text: "Very tight/obstacles", clusters: ["C4", "C5"] },
+        ]
+      },
+      {
+        bot: "What can you bring onto the site?",
+        options: [
+          { text: "Full access", clusters: ["C1"] },
+          { text: "Small loader/excavator", clusters: ["C2", "C3"] },
+          { text: "Small tools only", clusters: ["C4", "C5"] },
+        ]
+      },
+      {
+        bot: "Any strict inspection or QA?",
+        options: [
+          { text: "Basic photos", clusters: ["C1", "C2"] },
+          { text: "Standard QA", clusters: ["C3"] },
+          { text: "Full QA/sign-offs", clusters: ["C4", "C5"] },
+        ]
+      },
+      {
+        bot: "Is geotextile placement tied to other crews?",
+        options: [
+          { text: "Independent", clusters: ["C1", "C2"] },
+          { text: "Some coordination", clusters: ["C3", "C4"] },
+          { text: "Heavily interlocked", clusters: ["C5"] },
+        ]
+      },
+    ]
   },
 ];
 
 const Chatbot = () => {
   const [messages, setMessages] = useState([
-    { type: "bot", text: "Hello! I am your Geotextile Classifier Assistant. Let's classify your material by choosing clusters for each parameter." },
-    { type: "bot", text: parameters[0].prompt }
+    { type: "bot", text: "Hello! 👋 I’m your Geo Assistant. Ready to pick the right geotextile for your project?" },
   ]);
   const [displayedMessages, setDisplayedMessages] = useState([]);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [data, setData] = useState({});
-  const [selectedCluster, setSelectedCluster] = useState(null);
+  const [selectedClusters, setSelectedClusters] = useState({});
+  const [currentPriorityIndex, setCurrentPriorityIndex] = useState(-1);
+  const [currentSubStep, setCurrentSubStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [awaitingRestart, setAwaitingRestart] = useState(false);
-  const [showCards, setShowCards] = useState(false);
+  const [showPriorityOptions, setShowPriorityOptions] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [modes, setModes] = useState({});
+  const [completedPriorities, setCompletedPriorities] = useState(new Set());
+  const [showRemainingPriorities, setShowRemainingPriorities] = useState(false);
+  const [hasSkipped, setHasSkipped] = useState(false);
+  const [predictionTriggered, setPredictionTriggered] = useState(false);
+
 
   const scrollToBottom = () => {
     const chatContainer = document.getElementById("chat-container");
     if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
   };
 
-  useEffect(() => scrollToBottom(), [displayedMessages, selectedCluster, isLoading]);
+  useEffect(() => scrollToBottom(), [displayedMessages, isLoading]);
 
   // Display messages one by one with typing effect
   useEffect(() => {
@@ -150,12 +400,9 @@ const Chatbot = () => {
       const nextMessage = messages[displayedMessages.length];
       if (nextMessage.type === "bot") {
         setIsLoading(true);
-        setShowCards(false);
         const timeout = setTimeout(() => {
           setDisplayedMessages((prev) => [...prev, nextMessage]);
           setIsLoading(false);
-          // Show cards only if currentStep < parameters.length
-          if (currentStep < parameters.length && !awaitingRestart) setShowCards(true);
         }, 600);
         return () => clearTimeout(timeout);
       } else {
@@ -164,50 +411,222 @@ const Chatbot = () => {
     }
   }, [messages, displayedMessages]);
 
-  const handleSelect = (idx) => setSelectedCluster(idx);
-
-  const handleConfirm = () => {
-    const cluster = parameters[currentStep]?.clusters[selectedCluster];
-    if (!cluster && currentStep < parameters.length) return;
-
-    if (currentStep < parameters.length) {
-      setMessages((prev) => [
-        ...prev,
-        { type: "user", text: `${cluster.id}: ${cluster.name}` },
-        { type: "bot", text: `You selected ${cluster.id}: ${cluster.name} (${cluster.range}). ${cluster.desc}` },
-      ]);
-      setData({ ...data, [parameters[currentStep].key]: selectedCluster + 1 });
-      setSelectedCluster(null);
-
-      if (currentStep < parameters.length - 1) {
-        const nextParam = parameters[currentStep + 1];
-        setMessages((prev) => [...prev, { type: "bot", text: nextParam.prompt }]);
-        setCurrentStep(currentStep + 1);
-      } else {
-        setMessages((prev) => [...prev, { type: "bot", text: "All selections completed. Do you want to classify this material?" }]);
-        setCurrentStep(parameters.length);
+  const getMode = (clusters) => {
+    if (clusters.length === 0) return 'C3'; // Default if skipped
+    const count = {};
+    clusters.forEach(c => count[c] = (count[c] || 0) + 1);
+    let maxCount = 0;
+    let candidates = [];
+    for (let c in count) {
+      if (count[c] > maxCount) {
+        maxCount = count[c];
+        candidates = [c];
+      } else if (count[c] === maxCount) {
+        candidates.push(c);
       }
+    }
+    candidates.sort((a, b) => b.localeCompare(a));
+    return candidates[0];
+  };
+
+  const handleInitialDecision = (decision) => {
+    setMessages((prev) => [...prev, { type: "user", text: decision }]);
+    if (decision === "Yes, let’s start") {
+      setMessages((prev) => [...prev, { type: "bot", text: "Awesome. Which do you want to prioritize first?" }]);
+      setShowPriorityOptions(true);
+    } else {
+      setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
     }
   };
 
-  const handleDecision = async (decision) => {
-    setMessages((prev) => [...prev, { type: "user", text: decision }]);
+  const handlePrioritySelect = (idx) => {
+    setMessages((prev) => [...prev, { type: "user", text: priorities[idx].label }]);
+    setCurrentPriorityIndex(idx);
+    setCurrentSubStep(0);
+    setShowPriorityOptions(false);
+    const firstStep = priorities[idx].subflow[0];
+    setMessages((prev) => [...prev, { type: "bot", text: firstStep.bot }]);
+  };
 
-    if (!awaitingRestart) {
-      if (decision === "yes") {
+  const handleOptionSelect = async (option) => {
+    setMessages((prev) => [...prev, { type: "user", text: option.text }]);
+    if (option.skip) {
+      // Mark this priority as completed (skipped)
+      const newCompleted = new Set([...completedPriorities, priorities[currentPriorityIndex].key]);
+      setCompletedPriorities(newCompleted);
+      // Show remaining priorities for user to choose
+      setMessages((prev) => [...prev, { type: "bot", text: "Okay, let's skip that. Which priority would you like to focus on next?" }]);
+      const remaining = priorities.filter(p => !newCompleted.has(p.key));
+      if (remaining.length > 0) {
+        setCurrentPriorityIndex(-1);
+        setShowRemainingPriorities(true);
+      } else {
+        // All done, proceed with prediction
+        const newModes = {};
+        priorities.forEach(p => {
+          newModes[p.key] = getMode(selectedClusters[p.key] || []);
+        });
+        setModes(newModes);
+        setPredictionTriggered(true);
         setIsLoading(true);
         try {
+          const clusterKeyMap = {
+            tensile_strength: "Tensile Cluster",
+            puncture_resistance: "Puncture Cluster",
+            permittivity: "Permittivity Cluster",
+            filtration_efficiency: "Filtration Cluster",
+            recycled_content: "Recycled Cluster",
+            biobased_content: "Biobased Cluster",
+            uv_strength: "UV Cluster",
+            material_cost: "Material Cost Cluster",
+            installation_cost: "Install Cost Cluster"
+          };
+          const clusters = {};
+          priorities.forEach(p => {
+            clusters[clusterKeyMap[p.key]] = newModes[p.key];
+          });
           const response = await fetch("http://localhost:8000/predict", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ features: Object.values(data) }),
+            body: JSON.stringify({ clusters }),
           });
           const result = await response.json();
           setMessages((prev) => [
             ...prev,
             {
               type: "bot",
-              text: `Classification complete!\n\nPredicted Geotextile Type: ${result.predicted_type}\nConfidence: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material?`,
+              text: `Prediction complete!\n\nPredicted Geotextile Type: ${result.predicted_type}\nConfidence: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material?`,
+            },
+          ]);
+          setAwaitingRestart(true);
+        } catch (err) {
+          console.error(err);
+          setMessages((prev) => [...prev, { type: "bot", text: "Error connecting to backend." }]);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    } else {
+      // Normal option
+      const key = priorities[currentPriorityIndex].key;
+      setSelectedClusters((prev) => ({
+        ...prev,
+        [key]: [...(prev[key] || []), ...(option.clusters || [])]
+      }));
+      if (currentSubStep < priorities[currentPriorityIndex].subflow.length - 1) {
+        setCurrentSubStep(currentSubStep + 1);
+        const nextStep = priorities[currentPriorityIndex].subflow[currentSubStep + 1];
+        setMessages((prev) => [...prev, { type: "bot", text: nextStep.bot }]);
+      } else {
+        // Completed this priority
+        const newCompleted = new Set([...completedPriorities, key]);
+        setCompletedPriorities(newCompleted);
+        if (newCompleted.size === priorities.length) {
+          // All priorities handled, proceed with prediction
+          const newModes = {};
+          priorities.forEach(p => {
+            newModes[p.key] = getMode(selectedClusters[p.key] || []);
+          });
+          setModes(newModes);
+          setPredictionTriggered(true);
+          setIsLoading(true);
+          try {
+            const clusterKeyMap = {
+              tensile_strength: "Tensile Cluster",
+              puncture_resistance: "Puncture Cluster",
+              permittivity: "Permittivity Cluster",
+              filtration_efficiency: "Filtration Cluster",
+              recycled_content: "Recycled Cluster",
+              biobased_content: "Biobased Cluster",
+              uv_strength: "UV Cluster",
+              material_cost: "Material Cost Cluster",
+              installation_cost: "Install Cost Cluster"
+            };
+            const clusters = {};
+            priorities.forEach(p => {
+              clusters[clusterKeyMap[p.key]] = newModes[p.key];
+            });
+            const response = await fetch("http://localhost:8000/predict", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ clusters }),
+            });
+            const result = await response.json();
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "bot",
+                text: `Prediction complete!\n\nPredicted Geotextile Type: ${result.predicted_type}\nConfidence: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material?`,
+              },
+            ]);
+            setAwaitingRestart(true);
+          } catch (err) {
+            console.error(err);
+            setMessages((prev) => [...prev, { type: "bot", text: "Error connecting to backend." }]);
+          } finally {
+            setIsLoading(false);
+          }
+        } else {
+          // Show remaining priorities
+          setCurrentPriorityIndex(-1);
+          setShowRemainingPriorities(true);
+          setMessages((prev) => [...prev, { type: "bot", text: "Okay, priority completed. Which priority would you like to focus on next?" }]);
+        }
+      }
+    }
+  };
+
+  const handleContinue = () => {
+    setMessages((prev) => [...prev, { type: "user", text: "Continue" }]);
+    if (currentPriorityIndex < priorities.length - 1) {
+      setCurrentPriorityIndex(currentPriorityIndex + 1);
+      const nextFirstStep = priorities[currentPriorityIndex + 1].subflow[0];
+      setMessages((prev) => [...prev, { type: "bot", text: nextFirstStep.bot }]);
+    } else {
+      // Compute modes
+      const newModes = {};
+      priorities.forEach(p => {
+        newModes[p.key] = getMode(selectedClusters[p.key] || []);
+      });
+      setModes(newModes);
+      setShowSummary(true);
+      const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
+      setMessages((prev) => [...prev, { type: "bot", text: summary }]);
+    }
+  };
+
+  const handleFinalDecision = async (decision) => {
+    setMessages((prev) => [...prev, { type: "user", text: decision }]);
+    if (!awaitingRestart) {
+      if (decision === "yes") {
+        setIsLoading(true);
+        try {
+          const clusterKeyMap = {
+            tensile_strength: "Tensile Cluster",
+            puncture_resistance: "Puncture Cluster",
+            permittivity: "Permittivity Cluster",
+            filtration_efficiency: "Filtration Cluster",
+            recycled_content: "Recycled Cluster",
+            biobased_content: "Biobased Cluster",
+            uv_strength: "UV Cluster",
+            material_cost: "Material Cost Cluster",
+            installation_cost: "Install Cost Cluster"
+          };
+          const clusters = {};
+          priorities.forEach(p => {
+            clusters[clusterKeyMap[p.key]] = modes[p.key];
+          });
+          const response = await fetch("http://localhost:8000/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ clusters }),
+          });
+          const result = await response.json();
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "bot",
+              text: `Prediction complete!\n\nPredicted Geotextile Type: ${result.predicted_type}\nConfidence: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material?`,
             },
           ]);
           setAwaitingRestart(true);
@@ -218,21 +637,23 @@ const Chatbot = () => {
           setIsLoading(false);
         }
       } else {
-        setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geotextile Classifier." }]);
+        setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
       }
     } else {
       if (decision === "yes") {
-        setData({});
-        setSelectedCluster(null);
-        setCurrentStep(0);
+        setSelectedClusters({});
+        setCurrentPriorityIndex(-1);
+        setCurrentSubStep(0);
         setDisplayedMessages([]);
         setMessages([
-          { type: "bot", text: "Hello! I am your Geotextile Classifier Assistant. Let's classify your material by choosing clusters for each parameter." },
-          { type: "bot", text: parameters[0].prompt },
+          { type: "bot", text: "Hello! 👋 I’m your Geo Assistant. Ready to pick the right geotextile for your project?" },
         ]);
         setAwaitingRestart(false);
+        setShowPriorityOptions(false);
+        setShowSummary(false);
+        setModes({});
       } else {
-        setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geotextile Classifier." }]);
+        setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
       }
     }
   };
@@ -251,10 +672,10 @@ const Chatbot = () => {
     >
       {/* HEADER */}
       <div className="p-6 flex items-center justify-start space-x-4">
-        <img src="/maroon.png" alt="Geotextile Classifier Logo" className="w-12 h-12" style={{ objectFit: "cover" }} />
+        <img src="/maroon.png" alt="Geo Assistant Logo" className="w-12 h-12" style={{ objectFit: "cover" }} />
         <div className="text-left">
           <h1 className="text-3xl font-bold">Geotextile Classifier</h1>
-          <p className="text-base opacity-80" style={{ color: LIGHT_TEXT_COLOR }}>AI-Powered Material Classification</p>
+          <p className="text-base opacity-80" style={{ color: LIGHT_TEXT_COLOR }}>AI-Powered Geotextile Recommendation</p>
         </div>
       </div>
 
@@ -270,7 +691,7 @@ const Chatbot = () => {
                 boxShadow: SHADOW_LIGHT,
                 maxWidth: "65%",
                 whiteSpace: "pre-line",
-                transition: "all 0.4s ease", // SMOOTH entrance for cards
+                transition: "all 0.4s ease",
               }}
             >
               {msg.text}
@@ -286,74 +707,129 @@ const Chatbot = () => {
           </div>
         )}
 
-       {/* CLUSTER SELECTION WITH STAGGERED FADE-IN */}
-          {currentStep < parameters.length && !isLoading && showCards && (
-            <div className="max-w-full mx-auto space-y-3">
-              {/* Inline style for fadeIn keyframes */}
-              <style>
-                {`
-                  @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                  }
-                `}
-              </style>
-
-              {parameters[currentStep].clusters.map((cluster, idx) => (
-                <div
-                  key={cluster.id}
-                  onClick={() => handleSelect(idx)}
-                  className={`w-full cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md`}
-                  style={{
-                    opacity: 0,
-                    animation: `fadeIn 0.5s ease forwards`,
-                    animationDelay: `${idx * 0.15}s`, // stagger each card
-                  }}
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="font-semibold">{cluster.id}: {cluster.name}</div>
-                    <div className="text-gray-600 text-sm">{cluster.range}</div>
-                  </div>
-                  {selectedCluster === idx && (
-                    <div className="mt-2 text-gray-700 text-sm">
-                      {cluster.desc} ({cluster.range})
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              <button
-                onClick={handleConfirm}
-                disabled={selectedCluster === null}
-                className="mt-3 w-full py-2 rounded-lg font-bold"
-                style={{
-                  backgroundColor: MAROON_COLOR,
-                  color: "#fff",
-                  opacity: 0,
-                  animation: `fadeIn 0.5s ease forwards`,
-                  animationDelay: `${parameters[currentStep].clusters.length * 0.15}s`,
-                }}
-              >
-                Confirm
-              </button>
-            </div>
-          )}
-
-
-
-
-        {/* FINAL YES/NO */}
-        {currentStep >= parameters.length && !isLoading && (
+        {/* INITIAL YES/NO */}
+        {currentPriorityIndex === -1 && !showPriorityOptions && !showRemainingPriorities && !isLoading && (
           <div className="flex justify-center space-x-4 mt-3">
             <button
-              onClick={() => handleDecision("yes")}
+              onClick={() => handleInitialDecision("Yes, let’s start")}
               className="px-6 py-2 rounded-lg font-bold"
               style={{ backgroundColor: MAROON_COLOR, color: "#fff" }}
             >
               Yes
             </button>
             <button
-              onClick={() => handleDecision("no")}
+              onClick={() => handleInitialDecision("No")}
+              className="px-6 py-2 rounded-lg font-bold"
+              style={{ backgroundColor: "#ccc", color: "#000" }}
+            >
+              No
+            </button>
+          </div>
+        )}
+
+        {/* PRIORITY OPTIONS */}
+        {showPriorityOptions && !isLoading && (
+          <div className="max-w-full mx-auto space-y-3">
+            <style>
+              {`
+                @keyframes fadeIn {
+                  from { opacity: 0; transform: translateY(10px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+              `}
+            </style>
+            {priorities.map((priority, idx) => (
+              <div
+                key={priority.key}
+                onClick={() => handlePrioritySelect(idx)}
+                className="w-full cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md"
+                style={{
+                  opacity: 0,
+                  animation: `fadeIn 0.5s ease forwards`,
+                  animationDelay: '0s',
+                }}
+              >
+                <div className="font-semibold">{priority.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* REMAINING PRIORITY OPTIONS */}
+        {showRemainingPriorities && !isLoading && (
+          <div className="max-w-full mx-auto space-y-3">
+            <style>
+              {`
+                @keyframes fadeIn {
+                  from { opacity: 0; transform: translateY(10px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+              `}
+            </style>
+            {priorities.filter(p => !completedPriorities.has(p.key)).map((priority, idx) => (
+              <div
+                key={priority.key}
+                onClick={() => {
+                  const priorityIndex = priorities.findIndex(p => p.key === priority.key);
+                  setCurrentPriorityIndex(priorityIndex);
+                  setCurrentSubStep(0);
+                  setShowRemainingPriorities(false);
+                  const firstStep = priority.subflow[0];
+                  setMessages((prev) => [...prev, { type: "bot", text: firstStep.bot }]);
+                }}
+                className="w-full cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md"
+                style={{
+                  opacity: 0,
+                  animation: `fadeIn 0.5s ease forwards`,
+                  animationDelay: `${idx * 0.15}s`,
+                }}
+              >
+                <div className="font-semibold">{priority.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* SUBFLOW OPTIONS */}
+        {currentPriorityIndex >= 0 && currentPriorityIndex < priorities.length && !isLoading && !showSummary && (
+          <div className="max-w-full mx-auto space-y-3">
+            <style>
+              {`
+                @keyframes fadeIn {
+                  from { opacity: 0; transform: translateY(10px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+              `}
+            </style>
+            {priorities[currentPriorityIndex].subflow[currentSubStep].options.map((option, idx) => (
+              <div
+                key={idx}
+                onClick={() => handleOptionSelect(option)}
+                className="w-full cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md"
+                style={{
+                  opacity: 0,
+                  animation: `fadeIn 0.5s ease forwards`,
+                  animationDelay: `${idx * 0.15}s`,
+                }}
+              >
+                <div className="font-semibold">{option.text}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* FINAL YES/NO */}
+        {showSummary && !isLoading && (
+          <div className="flex justify-center space-x-4 mt-3">
+            <button
+              onClick={() => handleFinalDecision("yes")}
+              className="px-6 py-2 rounded-lg font-bold"
+              style={{ backgroundColor: MAROON_COLOR, color: "#fff" }}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => handleFinalDecision("no")}
               className="px-6 py-2 rounded-lg font-bold"
               style={{ backgroundColor: "#ccc", color: "#000" }}
             >
@@ -367,4 +843,3 @@ const Chatbot = () => {
 };
 
 export default Chatbot;
-
