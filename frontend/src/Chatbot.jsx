@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { FaInfoCircle } from "react-icons/fa";
 import TypingIndicator from "./TypingIndicator";
 
 // --- Theme Constants ---
 const GLOBAL_BG_COLOR = "#f2f0f0ff";
 const COMPONENT_BG_COLOR = "#F5F5F5";
-const LIGHT_TEXT_COLOR = "#000000";
+const LIGHT_TEXT_COLOR = "#333333";
 const MAROON_START_COLOR = "#efc0c0ff";
 const MAROON_END_COLOR = "#efc0c0ff";
 const MAROON_COLOR = "#efc0c0ff";
@@ -394,6 +395,9 @@ const Chatbot = () => {
   const [showSubflowOptions, setShowSubflowOptions] = useState(false);
   const [awaitingOptions, setAwaitingOptions] = useState(null);
 
+  // Model info modal state
+  const [showModelInfo, setShowModelInfo] = useState(false);
+
 
   // --- "SMART" SCROLL FUNCTION ---
   const scrollToBottom = () => {
@@ -585,7 +589,7 @@ const Chatbot = () => {
               });
               setModes(newModes);
               setShowSummary(true);
-              const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${clusterDescriptions[newModes[p.key]] || newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
+              const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${clusterDescriptions[newModes[p.key]] || newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the recommendation?";
               setMessages((prev) => [...prev, { type: "bot", text: summary }]);
             }
           }
@@ -629,7 +633,7 @@ const Chatbot = () => {
                 ...prev,
                 {
                   type: "bot",
-                  text: `Prediction complete!\n\nPredicted Geotextile Type: ${result.predicted_type}\nConfidence: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material?`,
+                  text: `Recommendation complete!\n\nRecommended Geotextile Type: ${result.predicted_type}\nConfidence: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material?`,
                 },
               ]);
               setAwaitingRestart(true);
@@ -674,7 +678,7 @@ const Chatbot = () => {
     <div
       className="flex flex-col h-full"
       style={{
-        backgroundColor: GLOBAL_BG_COLOR,
+        backgroundColor: "#FFFFFF", // Changed to white
         backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(
           '<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><path d="M0 100 Q50 50 100 100 T200 100" stroke="#e0b3b3" stroke-width="1" fill="none" opacity="0.2"/><path d="M0 120 Q50 70 100 120 T200 120" stroke="#e0b3b3" stroke-width="1" fill="none" opacity="0.2"/></svg>'
         )}")`,
@@ -682,121 +686,254 @@ const Chatbot = () => {
         color: LIGHT_TEXT_COLOR,
       }}
     >
-      {/* HEADER */}
-      <div className="p-4 md:p-6 flex flex-col md:flex-row items-center md:justify-start space-y-2 md:space-y-0 md:space-x-4">
-        <img src="/maroon.png" alt="Geo Assistant Logo" className="w-10 h-10 md:w-12 md:h-12" style={{ objectFit: "cover" }} />
-        <div className="text-center md:text-left">
-          <h1 className="text-2xl md:text-3xl font-bold">Geotextile Classifier</h1>
-          <p className="text-sm md:text-base opacity-80" style={{ color: LIGHT_TEXT_COLOR }}>AI-Powered Geotextile Recommendation</p>
-        </div>
-      </div>
-
-      {/* ---
-      --- THIS IS THE FIX. The layout is now one single scrolling column.
-      --- `id="chat-container"` is on this main div.
-      --- */}
-      <div id="chat-container" className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
-        <motion.div
-          // --- THIS IS THE CHANGE ---
-          // Added flex-col and space-y to add gaps between messages
-          className="flex flex-col space-y-4 md:space-y-6"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: {
-              opacity: 1,
-              transition: {
-                staggerChildren: 0.1,
-              },
-            },
-          }}
-        >
-          {displayedMessages.map((msg, i) => (
-            <motion.div
-              key={i}
-              className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
-              initial={i === 0 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
+      {showModelInfo ? (
+        // --- FULLSCREEN MODEL INFO ---
+        // This div mimics the parent's flex layout to fill the screen
+        <div className="flex flex-col h-full" style={{ color: LIGHT_TEXT_COLOR, backgroundColor: "#FFFFFF" }}>
+          {/* Info Header */}
+          <div className="bg-gray-100 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-gray-800">Geotextile Recommendation - Model Details</h2>
+            <button
+              onClick={() => setShowModelInfo(false)}
+              className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
             >
-              <div
-                className="no-select max-w-[85%] sm:max-w-[75%] md:max-w-[65%]"
-                style={{
-                  backgroundColor: msg.type === "user" ? MAROON_COLOR : COMPONENT_BG_COLOR,
-                  color: msg.type === "user" ? "#fff" : LIGHT_TEXT_COLOR,
-                  padding: "0.75rem 1.25rem",
-                  borderRadius: msg.type === "user" ? "1.5625rem 1.5625rem 0.3125rem 1.5625rem" : "1.5625rem 1.5625rem 1.5625rem 0.3125rem",
-                  boxShadow: SHADOW_LIGHT,
-                  whiteSpace: "pre-line",
-                }}
-              >
-                {msg.text}
+              ×
+            </button>
+          </div>
+          
+          {/* Info Content (Scrollable) */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Overview */}
+            <section>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Overview</h3>
+              <p className="text-gray-700 leading-relaxed">
+                This AI-powered Geotextile Recommendation system uses an Artificial Neural Network (ANN) trained on a comprehensive dataset of geotextile material properties. The system recommends the most suitable geotextile type from 9 different categories based on 9 key physical properties, providing calibrated confidence scores for reliable decision-making in civil engineering applications.
+              </p>
+            </section>
+
+            {/* Model Architecture */}
+            <section>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Neural Network Architecture</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-800 mb-2">Network Structure:</h4>
+                  <ul className="mt-3 space-y-1 text-sm text-gray-700">
+                  <li><strong>Input Dimension:</strong> 42 features (9 properties × 5 clusters each, one-hot encoded)</li>
+                  <li><strong>Hidden Layers:</strong> 2 fully connected layers with 64 and 32 neurons</li>
+                  <li><strong>Activation:</strong> LeakyReLU (negative slope = 0.1) for hidden layers</li>
+                  <li><strong>Regularization:</strong> Dropout (30% and 20%) to prevent overfitting</li>
+                  <li><strong>Output:</strong> 9-class softmax classification</li>
+                </ul>
               </div>
-            </motion.div>
-          ))}
-        </motion.div>
+            </section>
 
-        {/* ---
-        --- THE SECOND PART OF THE FIX ---
-        --- This wrapper div prevents the "jump" by holding a minimum height.
-        --- `flex flex-col justify-end` anchors the content to its bottom.
-        --- */}
-        <div
-          className="w-full flex flex-col justify-end"
-          style={{ minHeight: '9.375rem' }} // Adjust this height to fit your tallest grid
-        >
-          {/* All options and the typing indicator are now inside this wrapper */}
+            {/* --- NEW SECTION: Model Performance --- */}
+            <section>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Model Performance</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-blue-800 mb-2">Classification Metrics</h4>
+                  <ul className="space-y-1 text-sm text-blue-700">
+                    <li><strong>Accuracy:</strong> 80.67%</li>
+                    <li><strong>Precision:</strong> 80.67%</li>
+                    <li><strong>Recall:</strong> 80.67%</li>
+                    <li><strong>F1-Score:</strong> 75.42%</li>
+                  </ul>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-green-800 mb-2">Error Metrics</h4>
+                  <ul className="space-y-1 text-sm text-green-700">
+                    <li><strong>Loss (Categorical Cross-Entropy):</strong> 0.429</li>
+                    <li><strong>RMSE (Root Mean Squared Error):</strong> 0.178</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isLoading ? 1 : 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {isLoading && <TypingIndicator />}
-          </motion.div>
+            {/* Training Configuration */}
+            <section>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Training Configuration</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-blue-800 mb-2">Optimization</h4>
+                  <ul className="space-y-1 text-sm text-blue-700">
+                    <li><strong>Loss Function:</strong> Categorical Cross-Entropy</li>
+                    <li><strong>Optimizer:</strong> Adam (learning rate = 0.001)</li>
+                    <li><strong>Batch Size:</strong> 16</li>
+                    <li><strong>Max Epochs:</strong> 150 (with early stopping)</li>
+                  </ul>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-green-800 mb-2">Regularization</h4>
+                  <ul className="space-y-1 text-sm text-green-700">
+                    <li><strong>Early Stopping:</strong> Monitor val_loss, patience = 10</li>
+                    <li><strong>LR Scheduler:</strong> Reduce on plateau, factor = 0.5, patience = 6</li>
+                    <li><strong>Dropout:</strong> 30% and 20% in hidden layers</li>
+                    <li><strong>Reproducibility:</strong> Fixed seeds (42)</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
 
-          {/* INITIAL YES/NO */}
-          {showInitialOptions && !isLoading && (
+            {/* Preprocessing Pipeline */}
+            <section>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Data Preprocessing Pipeline</h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-2">1. Expert-Defined Clustering</h4>
+                  <p className="text-gray-700 text-sm mb-2">
+                    Each of the 9 continuous features is discretized into 5 performance clusters (C1-C5):
+                  </p>
+                  <div className="grid md:grid-cols-3 gap-3 text-xs">
+                    <div className="bg-yellow-50 p-3 rounded">
+                      <strong>Tensile Strength:</strong><br/>
+                      C1: ≤30, C2: 31-60, C3: 61-120, C4: 121-200, C5: &gt;200 kN/m
+                    </div>
+                    <div className="bg-yellow-50 p-3 rounded">
+                      <strong>Puncture Resistance:</strong><br/>
+                      C1: ≤600, C2: 601-1000, C3: 1001-1400, C4: 1401-1800, C5: &gt;1800 N
+                    </div>
+                    <div className="bg-yellow-50 p-3 rounded">
+                      <strong>Permittivity:</strong><br/>
+                      C1: ≤0.2, C2: 0.21-0.5, C3: 0.51-1.0, C4: 1.01-1.5, C5: &gt;1.5 s⁻¹
+                    </div>
+                    <div className="bg-yellow-50 p-3 rounded">
+                      <strong>Filtration Efficiency:</strong><br/>
+                      C1: ≤75%, C2: 76-85%, C3: 86-90%, C4: 91-95%, C5: &gt;95%
+                    </div>
+                    <div className="bg-yellow-50 p-3 rounded">
+                      <strong>Recycled Content:</strong><br/>
+                      C1: 0%, C2: 1-30%, C3: 31-60%, C4: 61-99%, C5: 100%
+                    </div>
+                    <div className="bg-yellow-50 p-3 rounded">
+                      <strong>Biobased Content:</strong><br/>
+                      C1: 0%, C2: 1-30%, C3: 31-70%, C4: 71-99%, C5: 100%
+                    </div>
+                    <div className="bg-yellow-50 p-3 rounded">
+                      <strong>UV Strength Retained:</strong><br/>
+                      C1: ≤30%, C2: 31-50%, C3: 51-70%, C4: 71-85%, C5: &gt;85%
+                    </div>
+                    <div className="bg-yellow-50 p-3 rounded">
+                      <strong>Material Cost:</strong><br/>
+                      C1: ≤₱100, C2: ₱101-200, C3: ₱201-400, C4: ₱401-700, C5: &gt;₱700/m²
+                    </div>
+                    <div className="bg-yellow-50 p-3 rounded">
+                      <strong>Installation Cost:</strong><br/>
+                      C1: ≤₱50, C2: ₱51-100, C3: ₱101-200, C4: ₱201-350, C5: &gt;₱350/m²
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-2">2. One-Hot Encoding</h4>
+                  <p className="text-gray-700 text-sm">
+                    Cluster labels are converted to binary vectors, resulting in 42 input features (9 features × 5 clusters each).
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-2">3. Data Splitting</h4>
+                  <p className="text-gray-700 text-sm">
+                    Dataset split: 70% training, 15% validation, 15% testing with stratified sampling.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* Calibration */}
+            <section>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Probability Calibration</h3>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <h4 className="font-medium text-purple-800 mb-2">Platt Scaling</h4>
+                <p className="text-purple-700 text-sm mb-2">
+                  The model uses Platt scaling for reliable confidence scores:
+                </p>
+                <ul className="space-y-1 text-sm text-purple-700">
+                  <li>• Fits logistic regression scalers on validation set logits</li>
+                  <li>• Applies scalers to new recommendations for calibrated probabilities</li>
+                  <li>• Ensures probabilities sum to 1 and provide accurate uncertainty estimates</li>
+                </ul>
+              </div>
+            </section>
+
+            {/* Dataset */}
+            <section>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Dataset Information</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="bg-indigo-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-indigo-800 mb-2">Statistics</h4>
+                  <ul className="space-y-1 text-sm text-indigo-700">
+                    <li><strong>Total Samples:</strong> 2000 geotextile entries</li>
+                    <li><strong>Features:</strong> 9 physical properties</li>
+                    <li><strong>Target Classes:</strong> 9 geotextile types</li>
+                    <li><strong>Data Source:</strong> Various journals and studies</li>
+                  </ul>
+                </div>
+                <div className="bg-indigo-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-indigo-800 mb-2">Geotextile Types</h4>
+                  <ul className="space-y-1 text-sm text-indigo-700">
+                    <li>• Recycled PET Nonwoven</li>
+                    <li>• PET Woven</li>
+                    <li>• Hybrid (PP+Coir)</li>
+                    <li>• PP Woven</li>
+                    <li>• Glass Fiber Composite</li>
+                    <li>• PP Nonwoven</li>
+                    <li>• Coir Woven</li>
+                    <li>• PLA Nonwoven</li>
+                    <li>• HDPE Grid</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            {/* Applications */}
+            <section>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Applications</h3>
+              <p className="text-gray-700 leading-relaxed">
+                This recommendation system assists civil engineers and project managers in selecting optimal geotextile materials for various applications including soil stabilization, drainage systems, erosion control, retaining walls, road construction, and environmental protection projects. The AI recommendations help balance performance requirements with cost considerations and sustainability goals.
+              </p>
+            </section>
+
+            {/* Technical Notes */}
+            <section>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Technical Notes</h3>
+              <div className="bg-red-50 p-4 rounded-lg">
+                <p className="text-red-700 text-sm">
+                  <strong>Note:</strong> This system is designed for research and educational purposes. For production use in critical engineering applications, additional validation, testing, and expert review should be performed. Always consult with qualified professionals for final material selection decisions.
+                </p>
+              </div>
+            </section>
+          </div>
+
+          {/* NO FOOTER HERE */}
+        </div>
+      ) : (
+        // --- CHAT INTERFACE ---
+        <>
+          {/* HEADER */}
+          <div className="p-4 md:p-6 flex flex-row items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <img src="/maroon.png" alt="Geo Assistant Logo" className="w-10 h-10 md:w-12 md:h-12" style={{ objectFit: "cover" }} />
+              <div className="text-center md:text-left">
+                <h1 className="text-2xl md:text-3xl font-bold">Geotextile Recommendation</h1>
+                <p className="text-sm md:text-base opacity-80" style={{ color: LIGHT_TEXT_COLOR }}>AI-Powered Geotextile Recommendation</p>
+              </div>
+            </div>
+            <FaInfoCircle
+              className="cursor-pointer text-lg"
+              style={{ color: "#800000" }}
+              onClick={() => setShowModelInfo(true)}
+            />
+          </div>
+
+          {/* ---
+          --- THIS IS THE FIX. The layout is now one single scrolling column.
+          --- `id="chat-container"` is on this main div.
+          --- */}
+          <div id="chat-container" className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
             <motion.div
-              // --- FIX: Use w-full and grid-cols-1 by default ---
-              className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
-              initial="hidden"
-              animate="visible"
-              variants={{
-                visible: { transition: { staggerChildren: 0.05 } }
-              }}
-            >
-              {[
-                { text: "Yes, let’s start", action: () => handleInitialDecision("Yes, let’s start") },
-                { text: "No", action: () => handleInitialDecision("No") }
-              ].map((option, idx) => (
-                <motion.div
-                  key={idx}
-                  onClick={option.action}
-                  className="cursor-pointer py-4 px-3 rounded-lg shadow-md no-select"
-                  style={{
-                    backgroundColor: idx === 0 ? MAROON_COLOR : "#ccc",
-                    color: idx === 0 ? "#fff" : "#000",
-                  }}
-                  variants={{
-                    hidden: { opacity: 0, y: 10 },
-                    visible: { opacity: 1, y: 0 }
-                  }}
-                  whileTap={{ scale: 0.97, opacity: 0.8 }}
-                >
-                  {/* --- FIX: Added text-center --- */}
-                  <div className="text-center">{option.text === "Yes, let’s start" ? "Yes" : option.text}</div>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-
-          {/* PRIORITY OPTIONS */}
-          {showPriorityOptions && !isLoading && (
-            <motion.div
-              // --- FIX: Use w-full and grid-cols-1 by default ---
-              className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
+              // --- THIS IS THE CHANGE ---
+              // Added flex-col and space-y to add gaps between messages
+              className="flex flex-col space-y-4 md:space-y-6"
               initial="hidden"
               animate="visible"
               variants={{
@@ -809,95 +946,72 @@ const Chatbot = () => {
                 },
               }}
             >
-              {priorities.map((priority, idx) => (
+              {displayedMessages.map((msg, i) => (
                 <motion.div
-                  key={priority.key}
-                  onClick={() => handlePrioritySelect(idx)}
-                  // --- FIX: Logic updated to handle col-span on md screens ---
-                  className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === priorities.length - 1 && priorities.length % 2 === 1 ? 'md:col-span-2' : ''}`}
-                  variants={{
-                    hidden: { opacity: 0, y: 20 },
-                    visible: { opacity: 1, y: 0 },
-                  }}
-                  whileTap={{ scale: 0.97, opacity: 0.8 }}
+                  key={i}
+                  className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
+                  initial={i === 0 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
                 >
-                  {/* --- FIX: Added text-center --- */}
-                  <div className="text-center">{priority.label}</div>
+                  <div
+                    className="no-select max-w-[85%] sm:max-w-[75%] md:max-w-[65%]"
+                    style={{
+                      backgroundColor: msg.type === "user" ? MAROON_COLOR : COMPONENT_BG_COLOR,
+                      color: msg.type === "user" ? "#fff" : LIGHT_TEXT_COLOR,
+                      padding: "0.75rem 1.25rem",
+                      borderRadius: msg.type === "user" ? "1.5625rem 1.5625rem 0.3125rem 1.5625rem" : "1.5625rem 1.5625rem 1.5625rem 0.3125rem",
+                      boxShadow: SHADOW_LIGHT,
+                      whiteSpace: "pre-line",
+                    }}
+                  >
+                    {msg.text}
+                  </div>
                 </motion.div>
               ))}
             </motion.div>
-          )}
 
-          {/* REMAINING PRIORITY OPTIONS */}
-          {showRemainingPriorities && !isLoading && (
-            <motion.div
-              // --- FIX: Use w-full and grid-cols-1 by default ---
-              className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
-              initial="hidden"
-              animate="visible"
-              variants={{
-                hidden: { opacity: 0 },
-                visible: {
-                  opacity: 1,
-                  transition: {
-                    staggerChildren: 0.1,
-                  },
-                },
-              }}
+            {/* ---
+            --- THE SECOND PART OF THE FIX ---
+            --- This wrapper div prevents the "jump" by holding a minimum height.
+            --- `flex flex-col justify-end` anchors the content to its bottom.
+            --- */}
+            <div
+              className="w-full flex flex-col justify-end"
+              style={{ minHeight: '9.375rem' }} // Adjust this height to fit your tallest grid
             >
-              {priorities.filter(p => !completedPriorities.has(p.key)).map((priority, idx, arr) => (
-                <motion.div
-                  key={priority.key}
-                  onClick={() => {
-                    setShowRemainingPriorities(false);
-                    const priorityIndex = priorities.findIndex(p => p.key === priority.key);
-                    startPrioritySubflow(priorityIndex);
-                  }}
-                  // --- FIX: Logic updated to handle col-span on md screens ---
-                  className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === arr.length - 1 && arr.length % 2 === 1 ? 'md:col-span-2' : ''}`}
-                  variants={{
-                    hidden: { opacity: 0, y: 20 },
-                    visible: { opacity: 1, y: 0 },
-                  }}
-                  whileTap={{ scale: 0.97, opacity: 0.8 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                >
-                  {/* --- FIX: Added text-center --- */}
-                  <div className="text-center">{priority.label}</div>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
+              {/* All options and the typing indicator are now inside this wrapper */}
 
-          {/* SUBFLOW OPTIONS */}
-          {currentPriorityIndex >= 0 &&
-            currentPriorityIndex < priorities.length &&
-            !isLoading &&
-            !showSummary &&
-            showSubflowOptions && (
               <motion.div
-                // --- FIX: Use w-full and grid-cols-1 by default ---
-                className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  visible: { transition: { staggerChildren: 0.05 } }
-                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isLoading ? 1 : 0 }}
+                transition={{ duration: 0.3 }}
               >
-                {priorities[currentPriorityIndex].subflow[currentSubStep].options.map((option, idx) => {
-                  const optionsLength = priorities[currentPriorityIndex].subflow[currentSubStep].options.length;
-                  const isAsapOrFlexible = option.text === "ASAP" || option.text === "Flexible";
-                  const isSmallSet = optionsLength <= 2;
-                  return (
+                {isLoading && <TypingIndicator />}
+              </motion.div>
+
+              {/* INITIAL YES/NO */}
+              {showInitialOptions && !isLoading && (
+                <motion.div
+                  // --- FIX: Use w-full and grid-cols-1 by default ---
+                  className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    visible: { transition: { staggerChildren: 0.05 } }
+                  }}
+                >
+                  {[
+                    { text: "Yes, let’s start", action: () => handleInitialDecision("Yes, let’s start") },
+                    { text: "No", action: () => handleInitialDecision("No") }
+                  ].map((option, idx) => (
                     <motion.div
                       key={idx}
-                      onClick={() => handleOptionSelect(option)}
-                      // --- FIX: Logic updated to handle col-span on md screens ---
-                      className={`cursor-pointer py-4 px-3 rounded-lg shadow-md no-select ${optionsLength === 1 ? 'col-span-1 md:col-span-2' : ''} ${idx === optionsLength - 1 && optionsLength % 2 === 1 ? 'col-span-1 md:col-span-2' : ''}`}
+                      onClick={option.action}
+                      className="cursor-pointer py-4 px-3 rounded-lg shadow-md no-select"
                       style={{
-                        backgroundColor: isAsapOrFlexible ? "#fff" : isSmallSet ? (idx === 0 ? MAROON_COLOR : "#ccc") : "#fff",
-                        color: isAsapOrFlexible ? "#000" : isSmallSet ? (idx === 0 ? "#fff" : "#000") : "#000",
+                        backgroundColor: idx === 0 ? MAROON_COLOR : "#ccc",
+                        color: idx === 0 ? "#fff" : "#000",
                       }}
                       variants={{
                         hidden: { opacity: 0, y: 10 },
@@ -906,50 +1020,172 @@ const Chatbot = () => {
                       whileTap={{ scale: 0.97, opacity: 0.8 }}
                     >
                       {/* --- FIX: Added text-center --- */}
-                      <div className="text-center">{option.text === "Yes, let’s start" ? "Yes" : option.text === "Not now" ? "No" : option.text}</div>
+                      <div className="text-center">{option.text === "Yes, let’s start" ? "Yes" : option.text}</div>
                     </motion.div>
-                  );
-                })}
-              </motion.div>
-            )}
-
-          {/* FINAL YES/NO */}
-          {showSummary && !isLoading && (
-            <motion.div
-              // --- FIX: Use w-full and grid-cols-1 by default ---
-              className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
-              initial="hidden"
-              animate="visible"
-              variants={{
-                visible: { transition: { staggerChildren: 0.05 } }
-              }}
-            >
-              {[
-                { text: "Yes", action: () => handleFinalDecision("yes") },
-                { text: "No", action: () => handleFinalDecision("no") }
-              ].map((option, idx) => (
-                <motion.div
-                  key={idx}
-                  onClick={option.action}
-                  className="cursor-pointer py-4 px-3 rounded-lg shadow-md no-select font-bold"
-                  style={{
-                    backgroundColor: idx === 0 ? MAROON_COLOR : "#ccc",
-                    color: idx === 0 ? "#fff" : "#000",
-                  }}
-                  variants={{
-                    hidden: { opacity: 0, y: 10 },
-                    visible: { opacity: 1, y: 0 }
-                  }}
-                  whileTap={{ scale: 0.97, opacity: 0.8 }}
-                >
-                  {/* --- FIX: Added text-center --- */}
-                  <div className="text-center">{option.text}</div>
+                  ))}
                 </motion.div>
-              ))}
-            </motion.div>
-          )}
-        </div> {/* --- End of min-height wrapper --- */}
-      </div>
+              )}
+
+              {/* PRIORITY OPTIONS */}
+              {showPriorityOptions && !isLoading && (
+                <motion.div
+                  // --- FIX: Use w-full and grid-cols-1 by default ---
+                  className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    hidden: { opacity: 0 },
+                    visible: {
+                      opacity: 1,
+                      transition: {
+                        staggerChildren: 0.1,
+                      },
+                    },
+                  }}
+                >
+                  {priorities.map((priority, idx) => (
+                    <motion.div
+                      key={priority.key}
+                      onClick={() => handlePrioritySelect(idx)}
+                      // --- FIX: Logic updated to handle col-span on md screens ---
+                      className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === priorities.length - 1 && priorities.length % 2 === 1 ? 'md:col-span-2' : ''}`}
+                      variants={{
+                        hidden: { opacity: 0, y: 20 },
+                        visible: { opacity: 1, y: 0 },
+                      }}
+                      whileTap={{ scale: 0.97, opacity: 0.8 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                    >
+                      {/* --- FIX: Added text-center --- */}
+                      <div className="text-center">{priority.label}</div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+
+              {/* REMAINING PRIORITY OPTIONS */}
+              {showRemainingPriorities && !isLoading && (
+                <motion.div
+                  // --- FIX: Use w-full and grid-cols-1 by default ---
+                  className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    hidden: { opacity: 0 },
+                    visible: {
+                      opacity: 1,
+                      transition: {
+                        staggerChildren: 0.1,
+                      },
+                    },
+                  }}
+                >
+                  {priorities.filter(p => !completedPriorities.has(p.key)).map((priority, idx, arr) => (
+                    <motion.div
+                      key={priority.key}
+                      onClick={() => {
+                        setShowRemainingPriorities(false);
+                        const priorityIndex = priorities.findIndex(p => p.key === priority.key);
+                        startPrioritySubflow(priorityIndex);
+                      }}
+                      // --- FIX: Logic updated to handle col-span on md screens ---
+                      className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === arr.length - 1 && arr.length % 2 === 1 ? 'md:col-span-2' : ''}`}
+                      variants={{
+                        hidden: { opacity: 0, y: 20 },
+                        visible: { opacity: 1, y: 0 },
+                      }}
+                      whileTap={{ scale: 0.97, opacity: 0.8 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                    >
+                      {/* --- FIX: Added text-center --- */}
+                      <div className="text-center">{priority.label}</div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+
+              {/* SUBFLOW OPTIONS */}
+              {currentPriorityIndex >= 0 &&
+                currentPriorityIndex < priorities.length &&
+                !isLoading &&
+                !showSummary &&
+                showSubflowOptions && (
+                  <motion.div
+                    // --- FIX: Use w-full and grid-cols-1 by default ---
+                    className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                      visible: { transition: { staggerChildren: 0.05 } }
+                    }}
+                  >
+                    {priorities[currentPriorityIndex].subflow[currentSubStep].options.map((option, idx) => {
+                      const optionsLength = priorities[currentPriorityIndex].subflow[currentSubStep].options.length;
+                      const isAsapOrFlexible = option.text === "ASAP" || option.text === "Flexible";
+                      const isSmallSet = optionsLength <= 2;
+                      return (
+                        <motion.div
+                          key={idx}
+                          onClick={() => handleOptionSelect(option)}
+                          // --- FIX: Logic updated to handle col-span on md screens ---
+                          className={`cursor-pointer py-4 px-3 rounded-lg shadow-md no-select ${optionsLength === 1 ? 'col-span-1 md:col-span-2' : ''} ${idx === optionsLength - 1 && optionsLength % 2 === 1 ? 'col-span-1 md:col-span-2' : ''}`}
+                          style={{
+                            backgroundColor: isAsapOrFlexible ? "#fff" : isSmallSet ? (idx === 0 ? MAROON_COLOR : "#ccc") : "#fff",
+                            color: isAsapOrFlexible ? "#000" : isSmallSet ? (idx === 0 ? "#fff" : "#000") : "#000",
+                          }}
+                          variants={{
+                            hidden: { opacity: 0, y: 10 },
+                            visible: { opacity: 1, y: 0 }
+                          }}
+                          whileTap={{ scale: 0.97, opacity: 0.8 }}
+                        >
+                          {/* --- FIX: Added text-center --- */}
+                          <div className="text-center">{option.text === "Yes, let’s start" ? "Yes" : option.text === "Not now" ? "No" : option.text}</div>
+                        </motion.div>
+                      );
+                    })}
+                  </motion.div>
+                )}
+
+              {/* FINAL YES/NO */}
+              {showSummary && !isLoading && (
+                <motion.div
+                  // --- FIX: Use w-full and grid-cols-1 by default ---
+                  className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    visible: { transition: { staggerChildren: 0.05 } }
+                  }}
+                >
+                  {[
+                    { text: "Yes", action: () => handleFinalDecision("yes") },
+                    { text: "No", action: () => handleFinalDecision("no") }
+                  ].map((option, idx) => (
+                    <motion.div
+                      key={idx}
+                      onClick={option.action}
+                      className="cursor-pointer py-4 px-3 rounded-lg shadow-md no-select font-bold"
+                      style={{
+                        backgroundColor: idx === 0 ? MAROON_COLOR : "#ccc",
+                        color: idx === 0 ? "#fff" : "#000",
+                      }}
+                      variants={{
+                        hidden: { opacity: 0, y: 10 },
+                        visible: { opacity: 1, y: 0 }
+                      }}
+                      whileTap={{ scale: 0.97, opacity: 0.8 }}
+                    >
+                      {/* --- FIX: Added text-center --- */}
+                      <div className="text-center">{option.text}</div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </div> {/* --- End of min-height wrapper --- */}
+          </div>
+        </>
+      )}
     </div>
   );
 };

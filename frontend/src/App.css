@@ -1,3 +1,4 @@
+
 @import "tailwindcss";
 
 /* * CRITICAL FIX: Aggressively enforce white background with maroon accents and screen coverage.
@@ -14,11 +15,10 @@ html, body, #root {
   font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* Ensure ALL text is very dark gray (black-like), allowing components to manage their specific colors */
-* {
-    color: #333333 !important;
-    box-sizing: border-box;
+*:not(.info-icon):not(.info-icon *):not(svg):not(svg *):not(h1) {
+  color: #333333 !important;
 }
+
 
 /* Specific text color for subtle elements */
 .text-subtle-text {
@@ -28,15 +28,35 @@ html, body, #root {
     color: #666666 !important;
 }
 
-/* Title color override */
 h1 {
     color: #800000 !important;
 }
 
-/* FIX 1: Add utility class to disable text selection */
 .no-select {
   -webkit-user-select: none; /* Safari */
   -moz-user-select: none; /* Firefox */
   -ms-user-select: none; /* IE 10+ */
   user-select: none; /* Standard */
+}
+
+/* Ensure icon inherits correct color and beats global * rule */
+.info-icon,
+svg .info-icon * {
+  color: #800000 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.info-icon:hover {
+  color: #d4a0a0 !important;
+}
+
+/* Force SVG and its inner paths to use currentColor */
+.info-icon svg,
+.info-icon svg,
+svg .info-icon * {
+  fill: currentColor !important;
+  stroke: currentColor !important;
 }
