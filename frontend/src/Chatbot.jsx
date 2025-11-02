@@ -322,7 +322,7 @@ const priorities = [
         bot: "🛠️ Let’s set installation budget (₱/m²).",
         options: [
           { text: "Yes, set install budget", clusters: [] },
-          { text: "No, not now", skip: true }
+          { text: "Not now", skip: true }
         ]
       },
       {
@@ -356,7 +356,7 @@ const priorities = [
         options: [
           { text: "Basic photos", clusters: ["C1", "C2"] },
           { text: "Standard QA", clusters: ["C3"] },
-          { text: "Full QA/sign-offs", clusters: ["C4", "C5"] },
+          { text: "Full QA/sign-offs", clusters: ["C4","C5"] },
         ]
       },
       {
@@ -388,36 +388,42 @@ const Chatbot = () => {
   const [showRemainingPriorities, setShowRemainingPriorities] = useState(false);
   const [hasSkipped, setHasSkipped] = useState(false);
   const [predictionTriggered, setPredictionTriggered] = useState(false);
-  
+
   // State machine states
   const [showInitialOptions, setShowInitialOptions] = useState(false);
   const [showSubflowOptions, setShowSubflowOptions] = useState(false);
-  const [awaitingOptions, setAwaitingOptions] = useState(null); 
+  const [awaitingOptions, setAwaitingOptions] = useState(null);
 
 
+  // --- "SMART" SCROLL FUNCTION ---
   const scrollToBottom = () => {
+    // We target 'chat-container' which is the main scrolling div
     const chatContainer = document.getElementById("chat-container");
-    if (chatContainer && chatContainer.scrollHeight > chatContainer.clientHeight) {
-      chatContainer.scrollTo({
-        top: chatContainer.scrollHeight,
-        behavior: "smooth"
-      });
+    if (chatContainer) {
+      // This check is the "smart" part:
+      // Only scroll if the content is taller than the visible container
+      if (chatContainer.scrollHeight > chatContainer.clientHeight) {
+        chatContainer.scrollTo({
+          top: chatContainer.scrollHeight,
+          behavior: "smooth"
+        });
+      }
     }
   };
 
   // --- 
-  // --- SCROLLING FIX: This is now the ONLY useEffect for scrolling ---
+  // --- CONSOLIDATED SCROLLING HOOK ---
   // ---
   useEffect(() => {
     // We scroll ONLY if the typing indicator appears OR if any options appear
     if (isLoading || showInitialOptions || showPriorityOptions || showRemainingPriorities || showSubflowOptions || showSummary) {
       const timer = setTimeout(() => {
-        scrollToBottom();
+        scrollToBottom(); // The "smart" scroll function will check if it *needs* to.
       }, 50); // 50ms delay to let React render the options/indicator first
       return () => clearTimeout(timer);
     }
   }, [isLoading, showInitialOptions, showPriorityOptions, showRemainingPriorities, showSubflowOptions, showSummary]);
-  
+
   // This useEffect hook handles showing *new* bot messages
   useEffect(() => {
     // Only run if there are new messages to display
@@ -427,8 +433,8 @@ const Chatbot = () => {
         setIsLoading(true);
         const timeout = setTimeout(() => {
           setDisplayedMessages((prev) => [...prev, nextMessage]);
-          setIsLoading(false); 
-        }, 500); 
+          setIsLoading(false);
+        }, 500);
         return () => clearTimeout(timeout);
       } else {
         // User messages appear instantly
@@ -441,7 +447,7 @@ const Chatbot = () => {
   // waits a "read time", then shows the appropriate options.
   useEffect(() => {
     if (!isLoading && awaitingOptions) {
-      
+
       const timer = setTimeout(() => {
         if (awaitingOptions === 'initial') {
           setShowInitialOptions(true);
@@ -455,10 +461,10 @@ const Chatbot = () => {
         if (awaitingOptions === 'remainingPriorities') {
           setShowRemainingPriorities(true);
         }
-        
-        setAwaitingOptions(null); 
+
+        setAwaitingOptions(null);
       }, 250); // 250ms "read time"
-      
+
       return () => clearTimeout(timer);
     }
   }, [isLoading, awaitingOptions]);
@@ -470,7 +476,7 @@ const Chatbot = () => {
     if (displayedMessages.length === 1 && messages.length === 1) {
       setAwaitingOptions('initial');
     }
-  }, [displayedMessages, messages]); 
+  }, [displayedMessages, messages]);
 
   const getMode = (clusters) => {
     if (clusters.length === 0) return 'C3'; // Default if skipped
@@ -491,111 +497,111 @@ const Chatbot = () => {
   };
 
   const handleInitialDecision = (decision) => {
-    setShowInitialOptions(false); 
+    setShowInitialOptions(false);
     setMessages((prev) => [...prev, { type: "user", text: decision }]);
-    
+
     setTimeout(() => {
-      setIsLoading(true); 
-      
+      setIsLoading(true);
+
       setTimeout(() => { // "Thinking" delay
         if (decision === "Yes, let’s start") {
           setMessages((prev) => [...prev, { type: "bot", text: "Awesome. Which do you want to prioritize first?" }]);
-          setAwaitingOptions('priorityList'); 
+          setAwaitingOptions('priorityList');
         } else {
           setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
         }
-      }, 500); 
-      
-    }, 800); 
+      }, 500);
+
+    }, 800);
   };
 
   const startPrioritySubflow = (idx) => {
     const priorityLabel = priorities[idx].label;
     setMessages((prev) => {
-        if (prev[prev.length - 1].text !== priorityLabel) {
-            return [...prev, { type: "user", text: priorityLabel }];
-        }
-        return prev;
+      if (prev[prev.length - 1].text !== priorityLabel) {
+        return [...prev, { type: "user", text: priorityLabel }];
+      }
+      return prev;
     });
     setCurrentPriorityIndex(idx);
     setCurrentSubStep(0);
 
     setTimeout(() => {
-      setIsLoading(true); 
+      setIsLoading(true);
 
-      setTimeout(() => { 
+      setTimeout(() => {
         const firstStep = priorities[idx].subflow[0];
         setMessages((prev) => [...prev, { type: "bot", text: firstStep.bot }]);
         setAwaitingOptions('subflow');
-      }, 500); 
+      }, 500);
 
-    }, 800); 
+    }, 800);
   }
 
   const handlePrioritySelect = (idx) => {
-    setShowPriorityOptions(false); 
-    startPrioritySubflow(idx); 
+    setShowPriorityOptions(false);
+    startPrioritySubflow(idx);
   };
 
   const handleOptionSelect = async (option) => {
-    setShowSubflowOptions(false); 
+    setShowSubflowOptions(false);
     setMessages((prev) => [...prev, { type: "user", text: option.text }]);
 
     setTimeout(() => {
-      setIsLoading(true); 
+      setIsLoading(true);
 
-      setTimeout(() => { 
-          if (option.skip) {
-            setMessages((prev) => [...prev, { type: "bot", text: "Okay, let's skip that for now. Which priority would you like to focus on next?" }]);
-            setCurrentPriorityIndex(-1);
-            setAwaitingOptions('remainingPriorities'); 
+      setTimeout(() => {
+        if (option.skip) {
+          setMessages((prev) => [...prev, { type: "bot", text: "Okay, let's skip that for now. Which priority would you like to focus on next?" }]);
+          setCurrentPriorityIndex(-1);
+          setAwaitingOptions('remainingPriorities');
+        } else {
+          const key = priorities[currentPriorityIndex].key;
+          setSelectedClusters((prev) => ({
+            ...prev,
+            [key]: [...(prev[key] || []), ...(option.clusters || [])]
+          }));
+
+          if (currentSubStep < priorities[currentPriorityIndex].subflow.length - 1) {
+            setCurrentSubStep(currentSubStep + 1);
+            const nextStep = priorities[currentPriorityIndex].subflow[currentSubStep + 1];
+            setMessages((prev) => [...prev, { type: "bot", text: nextStep.bot }]);
+            setAwaitingOptions('subflow');
           } else {
-            const key = priorities[currentPriorityIndex].key;
-            setSelectedClusters((prev) => ({
-              ...prev,
-              [key]: [...(prev[key] || []), ...(option.clusters || [])]
-            }));
+            const newCompleted = new Set([...completedPriorities, key]);
+            setCompletedPriorities(newCompleted);
+            const nextPriorityIndex = priorities.findIndex(p => !newCompleted.has(p.key));
 
-            if (currentSubStep < priorities[currentPriorityIndex].subflow.length - 1) {
-              setCurrentSubStep(currentSubStep + 1);
-              const nextStep = priorities[currentPriorityIndex].subflow[currentSubStep + 1];
-              setMessages((prev) => [...prev, { type: "bot", text: nextStep.bot }]);
-              setAwaitingOptions('subflow'); 
+            if (nextPriorityIndex !== -1) {
+              setCurrentPriorityIndex(nextPriorityIndex);
+              setCurrentSubStep(0);
+              const firstStep = priorities[nextPriorityIndex].subflow[0];
+              setMessages((prev) => [...prev, { type: "bot", text: firstStep.bot }]);
+              setAwaitingOptions('subflow');
             } else {
-              const newCompleted = new Set([...completedPriorities, key]);
-              setCompletedPriorities(newCompleted);
-              const nextPriorityIndex = priorities.findIndex(p => !newCompleted.has(p.key));
-
-              if (nextPriorityIndex !== -1) {
-                setCurrentPriorityIndex(nextPriorityIndex);
-                setCurrentSubStep(0);
-                const firstStep = priorities[nextPriorityIndex].subflow[0];
-                setMessages((prev) => [...prev, { type: "bot", text: firstStep.bot }]);
-                setAwaitingOptions('subflow'); 
-              } else {
-                const newModes = {};
-                priorities.forEach(p => {
-                  newModes[p.key] = getMode(selectedClusters[p.key] || []);
-                });
-                setModes(newModes);
-                setShowSummary(true);
-                const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${clusterDescriptions[newModes[p.key]] || newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
-                setMessages((prev) => [...prev, { type: "bot", text: summary }]);
-              }
+              const newModes = {};
+              priorities.forEach(p => {
+                newModes[p.key] = getMode(selectedClusters[p.key] || []);
+              });
+              setModes(newModes);
+              setShowSummary(true);
+              const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${clusterDescriptions[newModes[p.key]] || newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
+              setMessages((prev) => [...prev, { type: "bot", text: summary }]);
             }
           }
-      }, 500); 
+        }
+      }, 500);
 
-    }, 800); 
+    }, 800);
   };
 
   const handleFinalDecision = async (decision) => {
     setMessages((prev) => [...prev, { type: "user", text: decision }]);
-    
+
     setTimeout(() => {
       if (!awaitingRestart) {
         if (decision === "yes") {
-          setIsLoading(true); 
+          setIsLoading(true);
           (async () => {
             try {
               const clusterKeyMap = {
@@ -633,36 +639,35 @@ const Chatbot = () => {
             }
           })();
         } else {
-          setIsLoading(true); 
-          setTimeout(() => { 
-              setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
+          setIsLoading(true);
+          setTimeout(() => {
+            setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
           }, 500);
         }
       } else {
-        setIsLoading(true); 
-        setTimeout(() => { 
+        setIsLoading(true);
+        setTimeout(() => {
           if (decision === "yes") {
-              setSelectedClusters({});
-              setCurrentPriorityIndex(-1);
-              setCurrentSubStep(0);
-              // We must reset both messages and displayedMessages
-              const firstMessage = [{ type: "bot", text: "Hello! 👋 I’m your Geo Assistant. Ready to pick the right geotextile for your project?" }];
-              setMessages(firstMessage); 
-              setDisplayedMessages(firstMessage);
-              
-              setAwaitingRestart(false);
-              setShowPriorityOptions(false);
-              setShowSummary(false);
-              setModes({});
-              setCompletedPriorities(new Set()); 
-              
-              setAwaitingOptions('initial'); 
+            setSelectedClusters({});
+            setCurrentPriorityIndex(-1);
+            setCurrentSubStep(0);
+            const firstMessage = [{ type: "bot", text: "Hello! 👋 I’m your Geo Assistant. Ready to pick the right geotextile for your project?" }];
+            setMessages(firstMessage);
+            setDisplayedMessages(firstMessage);
+
+            setAwaitingRestart(false);
+            setShowPriorityOptions(false);
+            setShowSummary(false);
+            setModes({});
+            setCompletedPriorities(new Set());
+
+            setAwaitingOptions('initial');
           } else {
-              setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
+            setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
           }
         }, 500);
       }
-    }, 800); 
+    }, 800);
   };
 
   return (
@@ -678,16 +683,23 @@ const Chatbot = () => {
       }}
     >
       {/* HEADER */}
-      <div className="p-6 flex items-center justify-start space-x-4">
-        <img src="/maroon.png" alt="Geo Assistant Logo" className="w-12 h-12" style={{ objectFit: "cover" }} />
-        <div className="text-left">
-          <h1 className="text-3xl font-bold">Geotextile Classifier</h1>
-          <p className="text-base opacity-80" style={{ color: LIGHT_TEXT_COLOR }}>AI-Powered Geotextile Recommendation</p>
+      <div className="p-4 md:p-6 flex flex-col md:flex-row items-center md:justify-start space-y-2 md:space-y-0 md:space-x-4">
+        <img src="/maroon.png" alt="Geo Assistant Logo" className="w-10 h-10 md:w-12 md:h-12" style={{ objectFit: "cover" }} />
+        <div className="text-center md:text-left">
+          <h1 className="text-2xl md:text-3xl font-bold">Geotextile Classifier</h1>
+          <p className="text-sm md:text-base opacity-80" style={{ color: LIGHT_TEXT_COLOR }}>AI-Powered Geotextile Recommendation</p>
         </div>
       </div>
 
-      <div id="chat-container" className="flex-1 overflow-y-auto p-6 space-y-6">
+      {/* ---
+      --- THIS IS THE FIX. The layout is now one single scrolling column.
+      --- `id="chat-container"` is on this main div.
+      --- */}
+      <div id="chat-container" className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
         <motion.div
+          // --- THIS IS THE CHANGE ---
+          // Added flex-col and space-y to add gaps between messages
+          className="flex flex-col space-y-4 md:space-y-6"
           initial="hidden"
           animate="visible"
           variants={{
@@ -709,14 +721,13 @@ const Chatbot = () => {
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
               <div
-                className="no-select"
+                className="no-select max-w-[85%] sm:max-w-[75%] md:max-w-[65%]"
                 style={{
                   backgroundColor: msg.type === "user" ? MAROON_COLOR : COMPONENT_BG_COLOR,
                   color: msg.type === "user" ? "#fff" : LIGHT_TEXT_COLOR,
-                  padding: "12px 20px",
-                  borderRadius: msg.type === "user" ? "25px 25px 5px 25px" : "25px 25px 25px 5px",
+                  padding: "0.75rem 1.25rem",
+                  borderRadius: msg.type === "user" ? "1.5625rem 1.5625rem 0.3125rem 1.5625rem" : "1.5625rem 1.5625rem 1.5625rem 0.3125rem",
                   boxShadow: SHADOW_LIGHT,
-                  maxWidth: "65%",
                   whiteSpace: "pre-line",
                 }}
               >
@@ -726,20 +737,30 @@ const Chatbot = () => {
           ))}
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: isLoading ? 1 : 0 }}
-          transition={{ duration: 0.3 }}
+        {/* ---
+        --- THE SECOND PART OF THE FIX ---
+        --- This wrapper div prevents the "jump" by holding a minimum height.
+        --- `flex flex-col justify-end` anchors the content to its bottom.
+        --- */}
+        <div
+          className="w-full flex flex-col justify-end"
+          style={{ minHeight: '9.375rem' }} // Adjust this height to fit your tallest grid
         >
-          {isLoading && <TypingIndicator />}
-        </motion.div>
+          {/* All options and the typing indicator are now inside this wrapper */}
 
-        {/* OPTIONS CONTAINER WITH MIN HEIGHT TO PREVENT JUMPING */}
-        <div className="min-h-[60px]">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: isLoading ? 1 : 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {isLoading && <TypingIndicator />}
+          </motion.div>
+
           {/* INITIAL YES/NO */}
           {showInitialOptions && !isLoading && (
             <motion.div
-              className="max-w-full mx-auto grid grid-cols-2 gap-3"
+              // --- FIX: Use w-full and grid-cols-1 by default ---
+              className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
               initial="hidden"
               animate="visible"
               variants={{
@@ -764,6 +785,7 @@ const Chatbot = () => {
                   }}
                   whileTap={{ scale: 0.97, opacity: 0.8 }}
                 >
+                  {/* --- FIX: Added text-center --- */}
                   <div className="text-center">{option.text === "Yes, let’s start" ? "Yes" : option.text}</div>
                 </motion.div>
               ))}
@@ -773,7 +795,8 @@ const Chatbot = () => {
           {/* PRIORITY OPTIONS */}
           {showPriorityOptions && !isLoading && (
             <motion.div
-              className="max-w-full mx-auto grid grid-cols-2 gap-3"
+              // --- FIX: Use w-full and grid-cols-1 by default ---
+              className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
               initial="hidden"
               animate="visible"
               variants={{
@@ -790,7 +813,8 @@ const Chatbot = () => {
                 <motion.div
                   key={priority.key}
                   onClick={() => handlePrioritySelect(idx)}
-                  className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === priorities.length - 1 ? 'col-span-2 text-center' : ''}`}
+                  // --- FIX: Logic updated to handle col-span on md screens ---
+                  className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === priorities.length - 1 && priorities.length % 2 === 1 ? 'md:col-span-2' : ''}`}
                   variants={{
                     hidden: { opacity: 0, y: 20 },
                     visible: { opacity: 1, y: 0 },
@@ -798,6 +822,7 @@ const Chatbot = () => {
                   whileTap={{ scale: 0.97, opacity: 0.8 }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
                 >
+                  {/* --- FIX: Added text-center --- */}
                   <div className="text-center">{priority.label}</div>
                 </motion.div>
               ))}
@@ -807,7 +832,8 @@ const Chatbot = () => {
           {/* REMAINING PRIORITY OPTIONS */}
           {showRemainingPriorities && !isLoading && (
             <motion.div
-              className="max-w-full mx-auto grid grid-cols-1 md:grid-cols-2 gap-3"
+              // --- FIX: Use w-full and grid-cols-1 by default ---
+              className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
               initial="hidden"
               animate="visible"
               variants={{
@@ -828,7 +854,8 @@ const Chatbot = () => {
                     const priorityIndex = priorities.findIndex(p => p.key === priority.key);
                     startPrioritySubflow(priorityIndex);
                   }}
-                  className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === arr.length - 1 && arr.length % 2 === 1 ? 'col-span-2 text-center' : ''}`}
+                  // --- FIX: Logic updated to handle col-span on md screens ---
+                  className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === arr.length - 1 && arr.length % 2 === 1 ? 'md:col-span-2' : ''}`}
                   variants={{
                     hidden: { opacity: 0, y: 20 },
                     visible: { opacity: 1, y: 0 },
@@ -836,6 +863,7 @@ const Chatbot = () => {
                   whileTap={{ scale: 0.97, opacity: 0.8 }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
                 >
+                  {/* --- FIX: Added text-center --- */}
                   <div className="text-center">{priority.label}</div>
                 </motion.div>
               ))}
@@ -844,48 +872,52 @@ const Chatbot = () => {
 
           {/* SUBFLOW OPTIONS */}
           {currentPriorityIndex >= 0 &&
-           currentPriorityIndex < priorities.length &&
-           !isLoading &&
-           !showSummary &&
-           showSubflowOptions && (
-            <motion.div
-              className="max-w-full mx-auto grid grid-cols-2 gap-3"
-              initial="hidden"
-              animate="visible"
-              variants={{
-                visible: { transition: { staggerChildren: 0.05 } }
-              }}
-            >
-              {priorities[currentPriorityIndex].subflow[currentSubStep].options.map((option, idx) => {
-                const optionsLength = priorities[currentPriorityIndex].subflow[currentSubStep].options.length;
-                const isAsapOrFlexible = option.text === "ASAP" || option.text === "Flexible";
-                const isSmallSet = optionsLength <= 2;
-                return (
-                  <motion.div
-                    key={idx}
-                    onClick={() => handleOptionSelect(option)}
-                    className={`cursor-pointer py-4 px-3 rounded-lg shadow-md no-select ${optionsLength === 1 ? 'col-span-2' : ''} ${idx === optionsLength - 1 && optionsLength % 2 === 1 ? 'col-span-2' : ''}`}
-                    style={{
-                      backgroundColor: isAsapOrFlexible ? "#fff" : isSmallSet ? (idx === 0 ? MAROON_COLOR : "#ccc") : "#fff",
-                      color: isAsapOrFlexible ? "#000" : isSmallSet ? (idx === 0 ? "#fff" : "#000") : "#000",
-                    }}
-                    variants={{
-                      hidden: { opacity: 0, y: 10 },
-                      visible: { opacity: 1, y: 0 }
-                    }}
-                    whileTap={{ scale: 0.97, opacity: 0.8 }}
-                  >
-                    <div className="text-center">{option.text === "Yes, let’s start" ? "Yes" : option.text === "Not now" ? "No" : option.text}</div>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          )}
+            currentPriorityIndex < priorities.length &&
+            !isLoading &&
+            !showSummary &&
+            showSubflowOptions && (
+              <motion.div
+                // --- FIX: Use w-full and grid-cols-1 by default ---
+                className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  visible: { transition: { staggerChildren: 0.05 } }
+                }}
+              >
+                {priorities[currentPriorityIndex].subflow[currentSubStep].options.map((option, idx) => {
+                  const optionsLength = priorities[currentPriorityIndex].subflow[currentSubStep].options.length;
+                  const isAsapOrFlexible = option.text === "ASAP" || option.text === "Flexible";
+                  const isSmallSet = optionsLength <= 2;
+                  return (
+                    <motion.div
+                      key={idx}
+                      onClick={() => handleOptionSelect(option)}
+                      // --- FIX: Logic updated to handle col-span on md screens ---
+                      className={`cursor-pointer py-4 px-3 rounded-lg shadow-md no-select ${optionsLength === 1 ? 'col-span-1 md:col-span-2' : ''} ${idx === optionsLength - 1 && optionsLength % 2 === 1 ? 'col-span-1 md:col-span-2' : ''}`}
+                      style={{
+                        backgroundColor: isAsapOrFlexible ? "#fff" : isSmallSet ? (idx === 0 ? MAROON_COLOR : "#ccc") : "#fff",
+                        color: isAsapOrFlexible ? "#000" : isSmallSet ? (idx === 0 ? "#fff" : "#000") : "#000",
+                      }}
+                      variants={{
+                        hidden: { opacity: 0, y: 10 },
+                        visible: { opacity: 1, y: 0 }
+                      }}
+                      whileTap={{ scale: 0.97, opacity: 0.8 }}
+                    >
+                      {/* --- FIX: Added text-center --- */}
+                      <div className="text-center">{option.text === "Yes, let’s start" ? "Yes" : option.text === "Not now" ? "No" : option.text}</div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            )}
 
           {/* FINAL YES/NO */}
           {showSummary && !isLoading && (
             <motion.div
-              className="max-w-full mx-auto grid grid-cols-2 gap-3"
+              // --- FIX: Use w-full and grid-cols-1 by default ---
+              className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
               initial="hidden"
               animate="visible"
               variants={{
@@ -910,12 +942,13 @@ const Chatbot = () => {
                   }}
                   whileTap={{ scale: 0.97, opacity: 0.8 }}
                 >
+                  {/* --- FIX: Added text-center --- */}
                   <div className="text-center">{option.text}</div>
                 </motion.div>
               ))}
             </motion.div>
           )}
-        </div>
+        </div> {/* --- End of min-height wrapper --- */}
       </div>
     </div>
   );
