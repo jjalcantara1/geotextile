@@ -32,3 +32,11 @@ html, body, #root {
 h1 {
     color: #800000 !important;
 }
+
+/* FIX 1: Add utility class to disable text selection */
+.no-select {
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE 10+ */
+  user-select: none; /* Standard */
+}

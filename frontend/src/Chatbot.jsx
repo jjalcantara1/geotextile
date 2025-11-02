@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import TypingIndicator from "./TypingIndicator";
 
 // --- Theme Constants ---
 const GLOBAL_BG_COLOR = "#f2f0f0ff";
@@ -373,7 +375,7 @@ const Chatbot = () => {
   const [messages, setMessages] = useState([
     { type: "bot", text: "Hello! 👋 I’m your Geo Assistant. Ready to pick the right geotextile for your project?" },
   ]);
-  const [displayedMessages, setDisplayedMessages] = useState([]);
+  const [displayedMessages, setDisplayedMessages] = useState(messages);
   const [selectedClusters, setSelectedClusters] = useState({});
   const [currentPriorityIndex, setCurrentPriorityIndex] = useState(-1);
   const [currentSubStep, setCurrentSubStep] = useState(0);
@@ -386,32 +388,89 @@ const Chatbot = () => {
   const [showRemainingPriorities, setShowRemainingPriorities] = useState(false);
   const [hasSkipped, setHasSkipped] = useState(false);
   const [predictionTriggered, setPredictionTriggered] = useState(false);
-  const [initialDecision, setInitialDecision] = useState(null);
+  
+  // State machine states
+  const [showInitialOptions, setShowInitialOptions] = useState(false);
+  const [showSubflowOptions, setShowSubflowOptions] = useState(false);
+  const [awaitingOptions, setAwaitingOptions] = useState(null); 
 
 
   const scrollToBottom = () => {
     const chatContainer = document.getElementById("chat-container");
-    if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+    if (chatContainer && chatContainer.scrollHeight > chatContainer.clientHeight) {
+      chatContainer.scrollTo({
+        top: chatContainer.scrollHeight,
+        behavior: "smooth"
+      });
+    }
   };
 
-  useEffect(() => scrollToBottom(), [displayedMessages, isLoading]);
-
-  // Display messages one by one with typing effect
+  // --- 
+  // --- SCROLLING FIX: This is now the ONLY useEffect for scrolling ---
+  // ---
   useEffect(() => {
+    // We scroll ONLY if the typing indicator appears OR if any options appear
+    if (isLoading || showInitialOptions || showPriorityOptions || showRemainingPriorities || showSubflowOptions || showSummary) {
+      const timer = setTimeout(() => {
+        scrollToBottom();
+      }, 50); // 50ms delay to let React render the options/indicator first
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, showInitialOptions, showPriorityOptions, showRemainingPriorities, showSubflowOptions, showSummary]);
+  
+  // This useEffect hook handles showing *new* bot messages
+  useEffect(() => {
+    // Only run if there are new messages to display
     if (messages.length > displayedMessages.length) {
       const nextMessage = messages[displayedMessages.length];
       if (nextMessage.type === "bot") {
         setIsLoading(true);
         const timeout = setTimeout(() => {
           setDisplayedMessages((prev) => [...prev, nextMessage]);
-          setIsLoading(false);
-        }, 600);
+          setIsLoading(false); 
+        }, 500); 
         return () => clearTimeout(timeout);
       } else {
+        // User messages appear instantly
         setDisplayedMessages((prev) => [...prev, nextMessage]);
       }
     }
   }, [messages, displayedMessages]);
+
+  // This useEffect hook waits for loading to finish, then
+  // waits a "read time", then shows the appropriate options.
+  useEffect(() => {
+    if (!isLoading && awaitingOptions) {
+      
+      const timer = setTimeout(() => {
+        if (awaitingOptions === 'initial') {
+          setShowInitialOptions(true);
+        }
+        if (awaitingOptions === 'priorityList') {
+          setShowPriorityOptions(true);
+        }
+        if (awaitingOptions === 'subflow') {
+          setShowSubflowOptions(true);
+        }
+        if (awaitingOptions === 'remainingPriorities') {
+          setShowRemainingPriorities(true);
+        }
+        
+        setAwaitingOptions(null); 
+      }, 250); // 250ms "read time"
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, awaitingOptions]);
+
+
+  // This shows the very first "Yes/No" options after the initial greeting
+  useEffect(() => {
+    // Check if *only* the first message is displayed
+    if (displayedMessages.length === 1 && messages.length === 1) {
+      setAwaitingOptions('initial');
+    }
+  }, [displayedMessages, messages]); 
 
   const getMode = (clusters) => {
     if (clusters.length === 0) return 'C3'; // Default if skipped
@@ -432,160 +491,178 @@ const Chatbot = () => {
   };
 
   const handleInitialDecision = (decision) => {
+    setShowInitialOptions(false); 
     setMessages((prev) => [...prev, { type: "user", text: decision }]);
-    if (decision === "Yes, let’s start") {
-      setMessages((prev) => [...prev, { type: "bot", text: "Awesome. Which do you want to prioritize first?" }]);
-      setShowPriorityOptions(true);
-    } else {
-      setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
-    }
+    
+    setTimeout(() => {
+      setIsLoading(true); 
+      
+      setTimeout(() => { // "Thinking" delay
+        if (decision === "Yes, let’s start") {
+          setMessages((prev) => [...prev, { type: "bot", text: "Awesome. Which do you want to prioritize first?" }]);
+          setAwaitingOptions('priorityList'); 
+        } else {
+          setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
+        }
+      }, 500); 
+      
+    }, 800); 
   };
 
-  const handlePrioritySelect = (idx) => {
-    setMessages((prev) => [...prev, { type: "user", text: priorities[idx].label }]);
+  const startPrioritySubflow = (idx) => {
+    const priorityLabel = priorities[idx].label;
+    setMessages((prev) => {
+        if (prev[prev.length - 1].text !== priorityLabel) {
+            return [...prev, { type: "user", text: priorityLabel }];
+        }
+        return prev;
+    });
     setCurrentPriorityIndex(idx);
     setCurrentSubStep(0);
-    setShowPriorityOptions(false);
-    const firstStep = priorities[idx].subflow[0];
-    setMessages((prev) => [...prev, { type: "bot", text: firstStep.bot }]);
+
+    setTimeout(() => {
+      setIsLoading(true); 
+
+      setTimeout(() => { 
+        const firstStep = priorities[idx].subflow[0];
+        setMessages((prev) => [...prev, { type: "bot", text: firstStep.bot }]);
+        setAwaitingOptions('subflow');
+      }, 500); 
+
+    }, 800); 
+  }
+
+  const handlePrioritySelect = (idx) => {
+    setShowPriorityOptions(false); 
+    startPrioritySubflow(idx); 
   };
 
   const handleOptionSelect = async (option) => {
+    setShowSubflowOptions(false); 
     setMessages((prev) => [...prev, { type: "user", text: option.text }]);
-    if (option.skip) {
-      // Put back in choices, don't mark as completed
-      setMessages((prev) => [...prev, { type: "bot", text: "Okay, let's skip that for now. Which priority would you like to focus on next?" }]);
-      setCurrentPriorityIndex(-1);
-      setShowRemainingPriorities(true);
-    } else {
-      // Normal option
-      const key = priorities[currentPriorityIndex].key;
-      setSelectedClusters((prev) => ({
-        ...prev,
-        [key]: [...(prev[key] || []), ...(option.clusters || [])]
-      }));
-      if (currentSubStep < priorities[currentPriorityIndex].subflow.length - 1) {
-        setCurrentSubStep(currentSubStep + 1);
-        const nextStep = priorities[currentPriorityIndex].subflow[currentSubStep + 1];
-        setMessages((prev) => [...prev, { type: "bot", text: nextStep.bot }]);
-      } else {
-        // Completed this priority
-        const newCompleted = new Set([...completedPriorities, key]);
-        setCompletedPriorities(newCompleted);
-        if (newCompleted.size === priorities.length) {
-          // All priorities handled, show summary
-          const newModes = {};
-          priorities.forEach(p => {
-            newModes[p.key] = getMode(selectedClusters[p.key] || []);
-          });
-          setModes(newModes);
-          setShowSummary(true);
-          const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${clusterDescriptions[newModes[p.key]] || newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
-          setMessages((prev) => [...prev, { type: "bot", text: summary }]);
-        } else {
-          // Auto-proceed to next incomplete priority in natural order
-          const nextPriorityIndex = priorities.findIndex(p => !newCompleted.has(p.key));
-          if (nextPriorityIndex !== -1) {
-            setCurrentPriorityIndex(nextPriorityIndex);
-            setCurrentSubStep(0);
-            const firstStep = priorities[nextPriorityIndex].subflow[0];
-            setMessages((prev) => [...prev, { type: "bot", text: firstStep.bot }]);
-          } else {
-            // All priorities completed, show summary
-            const newModes = {};
-            priorities.forEach(p => {
-              newModes[p.key] = getMode(selectedClusters[p.key] || []);
-            });
-            setModes(newModes);
-            setShowSummary(true);
-            const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${clusterDescriptions[newModes[p.key]] || newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
-            setMessages((prev) => [...prev, { type: "bot", text: summary }]);
-          }
-        }
-      }
-    }
-  };
 
-  const handleContinue = () => {
-    setMessages((prev) => [...prev, { type: "user", text: "Continue" }]);
-    if (currentPriorityIndex < priorities.length - 1) {
-      setCurrentPriorityIndex(currentPriorityIndex + 1);
-      const nextFirstStep = priorities[currentPriorityIndex + 1].subflow[0];
-      setMessages((prev) => [...prev, { type: "bot", text: nextFirstStep.bot }]);
-    } else {
-      // Compute modes
-      const newModes = {};
-      priorities.forEach(p => {
-        newModes[p.key] = getMode(selectedClusters[p.key] || []);
-      });
-      setModes(newModes);
-      setShowSummary(true);
-            const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
-      setMessages((prev) => [...prev, { type: "bot", text: summary }]);
-    }
+    setTimeout(() => {
+      setIsLoading(true); 
+
+      setTimeout(() => { 
+          if (option.skip) {
+            setMessages((prev) => [...prev, { type: "bot", text: "Okay, let's skip that for now. Which priority would you like to focus on next?" }]);
+            setCurrentPriorityIndex(-1);
+            setAwaitingOptions('remainingPriorities'); 
+          } else {
+            const key = priorities[currentPriorityIndex].key;
+            setSelectedClusters((prev) => ({
+              ...prev,
+              [key]: [...(prev[key] || []), ...(option.clusters || [])]
+            }));
+
+            if (currentSubStep < priorities[currentPriorityIndex].subflow.length - 1) {
+              setCurrentSubStep(currentSubStep + 1);
+              const nextStep = priorities[currentPriorityIndex].subflow[currentSubStep + 1];
+              setMessages((prev) => [...prev, { type: "bot", text: nextStep.bot }]);
+              setAwaitingOptions('subflow'); 
+            } else {
+              const newCompleted = new Set([...completedPriorities, key]);
+              setCompletedPriorities(newCompleted);
+              const nextPriorityIndex = priorities.findIndex(p => !newCompleted.has(p.key));
+
+              if (nextPriorityIndex !== -1) {
+                setCurrentPriorityIndex(nextPriorityIndex);
+                setCurrentSubStep(0);
+                const firstStep = priorities[nextPriorityIndex].subflow[0];
+                setMessages((prev) => [...prev, { type: "bot", text: firstStep.bot }]);
+                setAwaitingOptions('subflow'); 
+              } else {
+                const newModes = {};
+                priorities.forEach(p => {
+                  newModes[p.key] = getMode(selectedClusters[p.key] || []);
+                });
+                setModes(newModes);
+                setShowSummary(true);
+                const summary = "Here are your selections:\n" + priorities.map(p => `${p.label}: ${clusterDescriptions[newModes[p.key]] || newModes[p.key]}`).join('\n') + "\n\nDo you want to proceed with the prediction?";
+                setMessages((prev) => [...prev, { type: "bot", text: summary }]);
+              }
+            }
+          }
+      }, 500); 
+
+    }, 800); 
   };
 
   const handleFinalDecision = async (decision) => {
     setMessages((prev) => [...prev, { type: "user", text: decision }]);
-    if (!awaitingRestart) {
-      if (decision === "yes") {
-        setIsLoading(true);
-        try {
-          const clusterKeyMap = {
-            tensile_strength: "Tensile Cluster",
-            puncture_resistance: "Puncture Cluster",
-            permittivity: "Permittivity Cluster",
-            filtration_efficiency: "Filtration Cluster",
-            recycled_content: "Recycled Cluster",
-            biobased_content: "Biobased Cluster",
-            uv_strength: "UV Cluster",
-            material_cost: "Material Cost Cluster",
-            installation_cost: "Install Cost Cluster"
-          };
-          const clusters = {};
-          priorities.forEach(p => {
-            clusters[clusterKeyMap[p.key]] = modes[p.key];
-          });
-          const response = await fetch("http://localhost:8000/predict", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ clusters }),
-          });
-          const result = await response.json();
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "bot",
-              text: `Prediction complete!\n\nPredicted Geotextile Type: ${result.predicted_type}\nConfidence: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material?`,
-            },
-          ]);
-          setAwaitingRestart(true);
-        } catch (err) {
-          console.error(err);
-          setMessages((prev) => [...prev, { type: "bot", text: "Error connecting to backend." }]);
-        } finally {
-          setIsLoading(false);
+    
+    setTimeout(() => {
+      if (!awaitingRestart) {
+        if (decision === "yes") {
+          setIsLoading(true); 
+          (async () => {
+            try {
+              const clusterKeyMap = {
+                tensile_strength: "Tensile Cluster",
+                puncture_resistance: "Puncture Cluster",
+                permittivity: "Permittivity Cluster",
+                filtration_efficiency: "Filtration Cluster",
+                recycled_content: "Recycled Cluster",
+                biobased_content: "Biobased Cluster",
+                uv_strength: "UV Cluster",
+                material_cost: "Material Cost Cluster",
+                installation_cost: "Install Cost Cluster"
+              };
+              const clusters = {};
+              priorities.forEach(p => {
+                clusters[clusterKeyMap[p.key]] = modes[p.key];
+              });
+              const response = await fetch("http://localhost:8000/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ clusters }),
+              });
+              const result = await response.json();
+              setMessages((prev) => [
+                ...prev,
+                {
+                  type: "bot",
+                  text: `Prediction complete!\n\nPredicted Geotextile Type: ${result.predicted_type}\nConfidence: ${result.confidence}%\n\n${result.description}\n\nWould you like to test another material?`,
+                },
+              ]);
+              setAwaitingRestart(true);
+            } catch (err) {
+              console.error(err);
+              setMessages((prev) => [...prev, { type: "bot", text: "Error connecting to backend." }]);
+            }
+          })();
+        } else {
+          setIsLoading(true); 
+          setTimeout(() => { 
+              setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
+          }, 500);
         }
       } else {
-        setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
+        setIsLoading(true); 
+        setTimeout(() => { 
+          if (decision === "yes") {
+              setSelectedClusters({});
+              setCurrentPriorityIndex(-1);
+              setCurrentSubStep(0);
+              // We must reset both messages and displayedMessages
+              const firstMessage = [{ type: "bot", text: "Hello! 👋 I’m your Geo Assistant. Ready to pick the right geotextile for your project?" }];
+              setMessages(firstMessage); 
+              setDisplayedMessages(firstMessage);
+              
+              setAwaitingRestart(false);
+              setShowPriorityOptions(false);
+              setShowSummary(false);
+              setModes({});
+              setCompletedPriorities(new Set()); 
+              
+              setAwaitingOptions('initial'); 
+          } else {
+              setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
+          }
+        }, 500);
       }
-    } else {
-      if (decision === "yes") {
-        setSelectedClusters({});
-        setCurrentPriorityIndex(-1);
-        setCurrentSubStep(0);
-        setDisplayedMessages([]);
-        setMessages([
-          { type: "bot", text: "Hello! 👋 I’m your Geo Assistant. Ready to pick the right geotextile for your project?" },
-        ]);
-        setAwaitingRestart(false);
-        setShowPriorityOptions(false);
-        setShowSummary(false);
-        setModes({});
-      } else {
-        setMessages((prev) => [...prev, { type: "bot", text: "Okay! Thank you for using the Geo Assistant." }]);
-      }
-    }
+    }, 800); 
   };
 
   return (
@@ -610,163 +687,235 @@ const Chatbot = () => {
       </div>
 
       <div id="chat-container" className="flex-1 overflow-y-auto p-6 space-y-6">
-        {displayedMessages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}>
-            <div
-              style={{
-                backgroundColor: msg.type === "user" ? MAROON_COLOR : COMPONENT_BG_COLOR,
-                color: msg.type === "user" ? "#fff" : LIGHT_TEXT_COLOR,
-                padding: "12px 20px",
-                borderRadius: msg.type === "user" ? "25px 25px 5px 25px" : "25px 25px 25px 5px",
-                boxShadow: SHADOW_LIGHT,
-                maxWidth: "65%",
-                whiteSpace: "pre-line",
-                transition: "all 0.4s ease",
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1,
+              },
+            },
+          }}
+        >
+          {displayedMessages.map((msg, i) => (
+            <motion.div
+              key={i}
+              className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
+              initial={i === 0 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              <div
+                className="no-select"
+                style={{
+                  backgroundColor: msg.type === "user" ? MAROON_COLOR : COMPONENT_BG_COLOR,
+                  color: msg.type === "user" ? "#fff" : LIGHT_TEXT_COLOR,
+                  padding: "12px 20px",
+                  borderRadius: msg.type === "user" ? "25px 25px 5px 25px" : "25px 25px 25px 5px",
+                  boxShadow: SHADOW_LIGHT,
+                  maxWidth: "65%",
+                  whiteSpace: "pre-line",
+                }}
+              >
+                {msg.text}
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isLoading ? 1 : 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {isLoading && <TypingIndicator />}
+        </motion.div>
+
+        {/* OPTIONS CONTAINER WITH MIN HEIGHT TO PREVENT JUMPING */}
+        <div className="min-h-[60px]">
+          {/* INITIAL YES/NO */}
+          {showInitialOptions && !isLoading && (
+            <motion.div
+              className="max-w-full mx-auto grid grid-cols-2 gap-3"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                visible: { transition: { staggerChildren: 0.05 } }
               }}
             >
-              {msg.text}
-            </div>
-          </div>
-        ))}
+              {[
+                { text: "Yes, let’s start", action: () => handleInitialDecision("Yes, let’s start") },
+                { text: "No", action: () => handleInitialDecision("No") }
+              ].map((option, idx) => (
+                <motion.div
+                  key={idx}
+                  onClick={option.action}
+                  className="cursor-pointer py-4 px-3 rounded-lg shadow-md no-select"
+                  style={{
+                    backgroundColor: idx === 0 ? MAROON_COLOR : "#ccc",
+                    color: idx === 0 ? "#fff" : "#000",
+                  }}
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                  whileTap={{ scale: 0.97, opacity: 0.8 }}
+                >
+                  <div className="text-center">{option.text === "Yes, let’s start" ? "Yes" : option.text}</div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
 
-        {isLoading && (
-          <div className="flex justify-start">
-            <div style={{ backgroundColor: COMPONENT_BG_COLOR, color: LIGHT_TEXT_COLOR, padding: "12px 20px", borderRadius: "25px 25px 25px 5px", boxShadow: SHADOW_LIGHT, maxWidth: "65%" }}>
-              <span className="animate-pulse">...</span>
-            </div>
-          </div>
-        )}
-
-        {/* INITIAL YES/NO */}
-        {currentPriorityIndex === -1 && !showPriorityOptions && !showRemainingPriorities && !isLoading && (
-          <div className="flex justify-center space-x-4 mt-3">
-            <button
-              onClick={() => handleInitialDecision("Yes, let’s start")}
-              className="px-6 py-2 rounded-lg font-bold"
-              style={{ backgroundColor: MAROON_COLOR, color: "#fff" }}
+          {/* PRIORITY OPTIONS */}
+          {showPriorityOptions && !isLoading && (
+            <motion.div
+              className="max-w-full mx-auto grid grid-cols-2 gap-3"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: {
+                    staggerChildren: 0.1,
+                  },
+                },
+              }}
             >
-              Yes
-            </button>
-            <button
-              onClick={() => handleInitialDecision("No")}
-              className="px-6 py-2 rounded-lg font-bold"
-              style={{ backgroundColor: "#ccc", color: "#000" }}
+              {priorities.map((priority, idx) => (
+                <motion.div
+                  key={priority.key}
+                  onClick={() => handlePrioritySelect(idx)}
+                  className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === priorities.length - 1 ? 'col-span-2 text-center' : ''}`}
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
+                  whileTap={{ scale: 0.97, opacity: 0.8 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                >
+                  <div className="text-center">{priority.label}</div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+
+          {/* REMAINING PRIORITY OPTIONS */}
+          {showRemainingPriorities && !isLoading && (
+            <motion.div
+              className="max-w-full mx-auto grid grid-cols-1 md:grid-cols-2 gap-3"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: {
+                    staggerChildren: 0.1,
+                  },
+                },
+              }}
             >
-              No
-            </button>
-          </div>
-        )}
+              {priorities.filter(p => !completedPriorities.has(p.key)).map((priority, idx, arr) => (
+                <motion.div
+                  key={priority.key}
+                  onClick={() => {
+                    setShowRemainingPriorities(false);
+                    const priorityIndex = priorities.findIndex(p => p.key === priority.key);
+                    startPrioritySubflow(priorityIndex);
+                  }}
+                  className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === arr.length - 1 && arr.length % 2 === 1 ? 'col-span-2 text-center' : ''}`}
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
+                  whileTap={{ scale: 0.97, opacity: 0.8 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                >
+                  <div className="text-center">{priority.label}</div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
 
-        {/* PRIORITY OPTIONS */}
-        {showPriorityOptions && !isLoading && (
-          <div className="max-w-full mx-auto space-y-3">
-            <style>
-              {`
-                @keyframes fadeIn {
-                  from { opacity: 0; transform: translateY(10px); }
-                  to { opacity: 1; transform: translateY(0); }
-                }
-              `}
-            </style>
-            {priorities.map((priority, idx) => (
-              <div
-                key={priority.key}
-                onClick={() => handlePrioritySelect(idx)}
-                className="w-full cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md"
-                style={{
-                  opacity: 0,
-                  animation: `fadeIn 0.5s ease forwards`,
-                  animationDelay: '0s',
-                }}
-              >
-                <div className="font-semibold">{priority.label}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* REMAINING PRIORITY OPTIONS */}
-        {showRemainingPriorities && !isLoading && (
-          <div className="max-w-full mx-auto space-y-3">
-            <style>
-              {`
-                @keyframes fadeIn {
-                  from { opacity: 0; transform: translateY(10px); }
-                  to { opacity: 1; transform: translateY(0); }
-                }
-              `}
-            </style>
-            {priorities.filter(p => !completedPriorities.has(p.key)).map((priority, idx) => (
-              <div
-                key={priority.key}
-                onClick={() => {
-                  const priorityIndex = priorities.findIndex(p => p.key === priority.key);
-                  setCurrentPriorityIndex(priorityIndex);
-                  setCurrentSubStep(0);
-                  setShowRemainingPriorities(false);
-                  const firstStep = priority.subflow[0];
-                  setMessages((prev) => [...prev, { type: "bot", text: firstStep.bot }]);
-                }}
-                className="w-full cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md"
-                style={{
-                  opacity: 0,
-                  animation: `fadeIn 0.5s ease forwards`,
-                  animationDelay: `${idx * 0.15}s`,
-                }}
-              >
-                <div className="font-semibold">{priority.label}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* SUBFLOW OPTIONS */}
-        {currentPriorityIndex >= 0 && currentPriorityIndex < priorities.length && !isLoading && !showSummary && (
-          <div className="max-w-full mx-auto space-y-3">
-            <style>
-              {`
-                @keyframes fadeIn {
-                  from { opacity: 0; transform: translateY(10px); }
-                  to { opacity: 1; transform: translateY(0); }
-                }
-              `}
-            </style>
-            {priorities[currentPriorityIndex].subflow[currentSubStep].options.map((option, idx) => (
-              <div
-                key={idx}
-                onClick={() => handleOptionSelect(option)}
-                className="w-full cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md"
-                style={{
-                  opacity: 0,
-                  animation: `fadeIn 0.5s ease forwards`,
-                  animationDelay: `${idx * 0.15}s`,
-                }}
-              >
-                <div className="font-semibold">{option.text}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* FINAL YES/NO */}
-        {showSummary && !isLoading && (
-          <div className="flex justify-center space-x-4 mt-3">
-            <button
-              onClick={() => handleFinalDecision("yes")}
-              className="px-6 py-2 rounded-lg font-bold"
-              style={{ backgroundColor: MAROON_COLOR, color: "#fff" }}
+          {/* SUBFLOW OPTIONS */}
+          {currentPriorityIndex >= 0 &&
+           currentPriorityIndex < priorities.length &&
+           !isLoading &&
+           !showSummary &&
+           showSubflowOptions && (
+            <motion.div
+              className="max-w-full mx-auto grid grid-cols-2 gap-3"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                visible: { transition: { staggerChildren: 0.05 } }
+              }}
             >
-              Yes
-            </button>
-            <button
-              onClick={() => handleFinalDecision("no")}
-              className="px-6 py-2 rounded-lg font-bold"
-              style={{ backgroundColor: "#ccc", color: "#000" }}
+              {priorities[currentPriorityIndex].subflow[currentSubStep].options.map((option, idx) => {
+                const optionsLength = priorities[currentPriorityIndex].subflow[currentSubStep].options.length;
+                const isAsapOrFlexible = option.text === "ASAP" || option.text === "Flexible";
+                const isSmallSet = optionsLength <= 2;
+                return (
+                  <motion.div
+                    key={idx}
+                    onClick={() => handleOptionSelect(option)}
+                    className={`cursor-pointer py-4 px-3 rounded-lg shadow-md no-select ${optionsLength === 1 ? 'col-span-2' : ''} ${idx === optionsLength - 1 && optionsLength % 2 === 1 ? 'col-span-2' : ''}`}
+                    style={{
+                      backgroundColor: isAsapOrFlexible ? "#fff" : isSmallSet ? (idx === 0 ? MAROON_COLOR : "#ccc") : "#fff",
+                      color: isAsapOrFlexible ? "#000" : isSmallSet ? (idx === 0 ? "#fff" : "#000") : "#000",
+                    }}
+                    variants={{
+                      hidden: { opacity: 0, y: 10 },
+                      visible: { opacity: 1, y: 0 }
+                    }}
+                    whileTap={{ scale: 0.97, opacity: 0.8 }}
+                  >
+                    <div className="text-center">{option.text === "Yes, let’s start" ? "Yes" : option.text === "Not now" ? "No" : option.text}</div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          )}
+
+          {/* FINAL YES/NO */}
+          {showSummary && !isLoading && (
+            <motion.div
+              className="max-w-full mx-auto grid grid-cols-2 gap-3"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                visible: { transition: { staggerChildren: 0.05 } }
+              }}
             >
-              No
-            </button>
-          </div>
-        )}
+              {[
+                { text: "Yes", action: () => handleFinalDecision("yes") },
+                { text: "No", action: () => handleFinalDecision("no") }
+              ].map((option, idx) => (
+                <motion.div
+                  key={idx}
+                  onClick={option.action}
+                  className="cursor-pointer py-4 px-3 rounded-lg shadow-md no-select font-bold"
+                  style={{
+                    backgroundColor: idx === 0 ? MAROON_COLOR : "#ccc",
+                    color: idx === 0 ? "#fff" : "#000",
+                  }}
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                  whileTap={{ scale: 0.97, opacity: 0.8 }}
+                >
+                  <div className="text-center">{option.text}</div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </div>
       </div>
     </div>
   );
