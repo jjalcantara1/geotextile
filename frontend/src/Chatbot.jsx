@@ -623,7 +623,7 @@ const Chatbot = () => {
               priorities.forEach(p => {
                 clusters[clusterKeyMap[p.key]] = modes[p.key];
               });
-              const response = await fetch("http://localhost:8000/predict", {
+              const response = await fetch("https://breadboiii-geo3.hf.space/predict", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ clusters }),
@@ -913,7 +913,7 @@ const Chatbot = () => {
           <div className="p-4 md:p-6 flex flex-row items-center justify-between">
             <div className="flex items-center space-x-4">
               <img src="/maroon.png" alt="Geo Assistant Logo" className="w-10 h-10 md:w-12 md:h-12" style={{ objectFit: "cover" }} />
-              <div className="text-center md:text-left">
+              <div className="text-left">
                 <h1 className="text-2xl md:text-3xl font-bold">Geotextile Recommendation</h1>
                 <p className="text-sm md:text-base opacity-80" style={{ color: LIGHT_TEXT_COLOR }}>AI-Powered Geotextile Recommendation</p>
               </div>
@@ -925,14 +925,9 @@ const Chatbot = () => {
             />
           </div>
 
-          {/* ---
-          --- THIS IS THE FIX. The layout is now one single scrolling column.
-          --- `id="chat-container"` is on this main div.
-          --- */}
           <div id="chat-container" className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
             <motion.div
-              // --- THIS IS THE CHANGE ---
-              // Added flex-col and space-y to add gaps between messages
+              
               className="flex flex-col space-y-4 md:space-y-6"
               initial="hidden"
               animate="visible"
@@ -970,17 +965,10 @@ const Chatbot = () => {
                 </motion.div>
               ))}
             </motion.div>
-
-            {/* ---
-            --- THE SECOND PART OF THE FIX ---
-            --- This wrapper div prevents the "jump" by holding a minimum height.
-            --- `flex flex-col justify-end` anchors the content to its bottom.
-            --- */}
             <div
               className="w-full flex flex-col justify-end"
-              style={{ minHeight: '9.375rem' }} // Adjust this height to fit your tallest grid
+              style={{ minHeight: '10rem' }} // Adjust this height to fit your tallest grid
             >
-              {/* All options and the typing indicator are now inside this wrapper */}
 
               <motion.div
                 initial={{ opacity: 0 }}
@@ -993,7 +981,6 @@ const Chatbot = () => {
               {/* INITIAL YES/NO */}
               {showInitialOptions && !isLoading && (
                 <motion.div
-                  // --- FIX: Use w-full and grid-cols-1 by default ---
                   className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
                   initial="hidden"
                   animate="visible"
@@ -1019,7 +1006,6 @@ const Chatbot = () => {
                       }}
                       whileTap={{ scale: 0.97, opacity: 0.8 }}
                     >
-                      {/* --- FIX: Added text-center --- */}
                       <div className="text-center">{option.text === "Yes, let’s start" ? "Yes" : option.text}</div>
                     </motion.div>
                   ))}
@@ -1029,7 +1015,6 @@ const Chatbot = () => {
               {/* PRIORITY OPTIONS */}
               {showPriorityOptions && !isLoading && (
                 <motion.div
-                  // --- FIX: Use w-full and grid-cols-1 by default ---
                   className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
                   initial="hidden"
                   animate="visible"
@@ -1047,7 +1032,6 @@ const Chatbot = () => {
                     <motion.div
                       key={priority.key}
                       onClick={() => handlePrioritySelect(idx)}
-                      // --- FIX: Logic updated to handle col-span on md screens ---
                       className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === priorities.length - 1 && priorities.length % 2 === 1 ? 'md:col-span-2' : ''}`}
                       variants={{
                         hidden: { opacity: 0, y: 20 },
@@ -1056,7 +1040,6 @@ const Chatbot = () => {
                       whileTap={{ scale: 0.97, opacity: 0.8 }}
                       transition={{ duration: 0.3, ease: "easeOut" }}
                     >
-                      {/* --- FIX: Added text-center --- */}
                       <div className="text-center">{priority.label}</div>
                     </motion.div>
                   ))}
@@ -1066,7 +1049,6 @@ const Chatbot = () => {
               {/* REMAINING PRIORITY OPTIONS */}
               {showRemainingPriorities && !isLoading && (
                 <motion.div
-                  // --- FIX: Use w-full and grid-cols-1 by default ---
                   className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
                   initial="hidden"
                   animate="visible"
@@ -1088,7 +1070,6 @@ const Chatbot = () => {
                         const priorityIndex = priorities.findIndex(p => p.key === priority.key);
                         startPrioritySubflow(priorityIndex);
                       }}
-                      // --- FIX: Logic updated to handle col-span on md screens ---
                       className={`cursor-pointer py-4 px-3 rounded-lg bg-white shadow-md no-select ${idx === arr.length - 1 && arr.length % 2 === 1 ? 'md:col-span-2' : ''}`}
                       variants={{
                         hidden: { opacity: 0, y: 20 },
@@ -1097,7 +1078,6 @@ const Chatbot = () => {
                       whileTap={{ scale: 0.97, opacity: 0.8 }}
                       transition={{ duration: 0.3, ease: "easeOut" }}
                     >
-                      {/* --- FIX: Added text-center --- */}
                       <div className="text-center">{priority.label}</div>
                     </motion.div>
                   ))}
@@ -1111,7 +1091,6 @@ const Chatbot = () => {
                 !showSummary &&
                 showSubflowOptions && (
                   <motion.div
-                    // --- FIX: Use w-full and grid-cols-1 by default ---
                     className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
                     initial="hidden"
                     animate="visible"
@@ -1127,7 +1106,6 @@ const Chatbot = () => {
                         <motion.div
                           key={idx}
                           onClick={() => handleOptionSelect(option)}
-                          // --- FIX: Logic updated to handle col-span on md screens ---
                           className={`cursor-pointer py-4 px-3 rounded-lg shadow-md no-select ${optionsLength === 1 ? 'col-span-1 md:col-span-2' : ''} ${idx === optionsLength - 1 && optionsLength % 2 === 1 ? 'col-span-1 md:col-span-2' : ''}`}
                           style={{
                             backgroundColor: isAsapOrFlexible ? "#fff" : isSmallSet ? (idx === 0 ? MAROON_COLOR : "#ccc") : "#fff",
@@ -1139,7 +1117,6 @@ const Chatbot = () => {
                           }}
                           whileTap={{ scale: 0.97, opacity: 0.8 }}
                         >
-                          {/* --- FIX: Added text-center --- */}
                           <div className="text-center">{option.text === "Yes, let’s start" ? "Yes" : option.text === "Not now" ? "No" : option.text}</div>
                         </motion.div>
                       );
@@ -1150,7 +1127,6 @@ const Chatbot = () => {
               {/* FINAL YES/NO */}
               {showSummary && !isLoading && (
                 <motion.div
-                  // --- FIX: Use w-full and grid-cols-1 by default ---
                   className="w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
                   initial="hidden"
                   animate="visible"
@@ -1176,7 +1152,6 @@ const Chatbot = () => {
                       }}
                       whileTap={{ scale: 0.97, opacity: 0.8 }}
                     >
-                      {/* --- FIX: Added text-center --- */}
                       <div className="text-center">{option.text}</div>
                     </motion.div>
                   ))}
